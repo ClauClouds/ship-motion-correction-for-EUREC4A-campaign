@@ -44,15 +44,15 @@ def f_defineSingleColorPalette(colors, minVal, maxVal, step):
         norm
         bounds
     """
-    
+
     Intervals = ccp.range(minVal,maxVal,step)
-    
+
     # defines a sublist with characteristics of colors that will be used to create a custom palette
     palette = [colors, Intervals]
-    
+
     # we pass the parm_color inside a list to the creates_palette module
     cmap, ticks, norm, bounds = ccp.creates_palette([palette])
-    
+
     return(cmap, ticks, norm, bounds)
 def f_defineDoubleColorPalette(colorsLower, colorsUpper, minVal, maxVal, step, thrs):
     """
@@ -74,15 +74,15 @@ def f_defineDoubleColorPalette(colorsLower, colorsUpper, minVal, maxVal, step, t
     """
     lower_palette = [colorsLower, ccp.range(minVal, thrs, step)] # grigio: 8c8fab
     upper_palette = [colorsUpper, ccp.range(thrs, maxVal, step)] #sk # last old color 987d7b
-        
+
     # we pass the parm_color inside a list to the creates_palette module
     cmap, ticks, norm, bounds = ccp.creates_palette([lower_palette, upper_palette])
-    
+
     return(cmap, ticks, norm, bounds)
 
 
 
-    
+
 # paths to the different data files and output directories for plots
 pathFolderTree  = '/Volumes/Extreme SSD/ship_motion_correction_merian/'
 pathFig         = pathFolderTree+'/plots/quicklooks/'
@@ -94,28 +94,28 @@ NdaysEurec4a = len(Eurec4aDays)
 radar_name = 'msm'
 
 #%%
-for indDay in range(28, NdaysEurec4a):  
+for indDay in range(28, NdaysEurec4a):
     # select a date
     indDay = 9
     dayEu           = Eurec4aDays[indDay]
-    
+
     # extracting strings for yy, dd, mm
     yy              = str(dayEu)[0:4]
     mm              = str(dayEu)[5:7]
     dd              = str(dayEu)[8:10]
-        
+
     # setting dates strings
     date            = dd+mm+yy      #'04022020'
     dateRadar       = yy[0:2]+mm+dd #'200204'
     dateReverse     = yy+mm+dd      #'20200204'
-    
+
     pathRadar          = pathFolderTree+'/corrected_data/'+yy+'/'+mm+'/'+dd+'/'
     radarFileList      = np.sort(glob.glob(pathRadar+date+'_*msm94_msm_ZEN_corrected.nc'))
     Nfiles             = len(radarFileList)
-    
+
     print('reading mean Doppler velocity from radar files. Nfiles :', len(radarFileList))#
-    
-       
+
+
     print('processing day : '+yy+'/'+mm+'/'+dd)
     print("*************************************************")
     MeanDopVelDataset = xr.open_mfdataset(radarFileList,
@@ -136,13 +136,13 @@ for indDay in range(28, NdaysEurec4a):
     Sk                 = MeanDopVelDataset['skew'].values
     Sk[Sk == -999.]    = np.nan
     timeLocal          = datetimeRadar-timedelta(hours=4)
-    
+
     # set here the variable you want to plot
     varStringArr = ['Vd', 'Ze', 'Sw', 'Sk', ]
-    
-    
+
+
     for ivar in range(len(varStringArr)):
-        
+
         print('producing quicklook of '+varStringArr[ivar])
         varString = varStringArr[ivar]
         # settings for reflectivity
@@ -155,7 +155,7 @@ for indDay in range(28, NdaysEurec4a):
             var = ZeLog
             cbarstr = 'Ze [dBz]'
             strTitle = 'Reflectivity : '+dd+'.'+mm+'.'+yy
-        
+
         # settings for mean Doppler velocity
         elif varString == 'Vd':
             mincm = -4.
@@ -168,7 +168,7 @@ for indDay in range(28, NdaysEurec4a):
             var = Vd
             cbarstr = 'Vd [$ms^{-1}$]'
             strTitle = 'Mean Doppler velocity : '+dd+'.'+mm+'.'+yy
-        
+
         # settings for Spectral width
         elif varString == 'Sw':
             mincm = 0.
@@ -180,7 +180,7 @@ for indDay in range(28, NdaysEurec4a):
             var = Sw
             cbarstr = 'Sw [$ms^{-1}$]'
             strTitle = 'Spectral width : '+dd+'.'+mm+'.'+yy
-            
+
         # settings for skewness
         elif varString == 'Sk':
             mincm = -2.
@@ -193,8 +193,8 @@ for indDay in range(28, NdaysEurec4a):
             var = Sk
             cbarstr = '$Sk$ []'
             strTitle = 'Skewness : '+dd+'.'+mm+'.'+yy
-            
-    
+
+
         timeStartDay = timeLocal[0]
         timeEndDay   = timeLocal[-1]
         hmin         = 0.
@@ -215,10 +215,10 @@ for indDay in range(28, NdaysEurec4a):
         plt.gcf().subplots_adjust(bottom=0.15)
         fig.tight_layout()
         ax = plt.subplot(1,1,1)
-        ax.spines["top"].set_visible(False)  
-        ax.spines["right"].set_visible(False)  
-        ax.get_xaxis().tick_bottom()  
-        ax.get_yaxis().tick_left() 
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.get_xaxis().tick_bottom()
+        ax.get_yaxis().tick_left()
         matplotlib.rc('xtick', labelsize=labelsizeaxes)  # sets dimension of ticks in the plots
         matplotlib.rc('ytick', labelsize=labelsizeaxes)  # sets dimension of ticks in the plots
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
@@ -226,7 +226,7 @@ for indDay in range(28, NdaysEurec4a):
         ax.xaxis_date()
         ax.axvline(x=pd.to_datetime(datetime(yyPlot,mmPlot,ddPlot,6,30,0,0)), color='black',linewidth=4, linestyle=':')
         ax.axvline(x=pd.to_datetime(datetime(yyPlot,mmPlot,ddPlot,19,15,0,0)), color='black', linewidth=4, linestyle=':')
-    
+
         cax = ax.pcolormesh(timeLocal, rangeRadar, var.transpose(), vmin=mincm, vmax=maxcm, cmap=cmap)
         ax.set_ylim(hmin,hmax)                                               # limits of the y-axesn  cmap=plt.cm.get_cmap("viridis", 256)
         ax.set_xlim(timeStartDay, timeEndDay)                                 # limits of the x-axes
@@ -236,20 +236,20 @@ for indDay in range(28, NdaysEurec4a):
         cbar = fig.colorbar(cax, orientation='vertical', aspect=cbarAspect)
         cbar.set_label(label=cbarstr, size=fontSizeCbar)
         cbar.ax.tick_params(labelsize=labelsizeaxes)
-        # Turn on the frame for the twin axis, but then hide all 
+        # Turn on the frame for the twin axis, but then hide all
         # but the bottom spine
-    
+
         fig.tight_layout()
         plt.savefig(pathFig+yy+mm+dd+'_'+radar_name+'_'+varString+'_quicklooks.png', format='png', bbox_inches='tight')
-        
-    
-    # plot of time series for radar variable control: blower status, p_trans, t_trans, t_rec, t_pc, 
+
+
+    # plot of time series for radar variable control: blower status, p_trans, t_trans, t_rec, t_pc,
     blowerStatus = MeanDopVelDataset['blower_status'].values
     p_trans      = MeanDopVelDataset['p_trans'].values
     t_trans      = MeanDopVelDataset['t_trans'].values
     t_rec        = MeanDopVelDataset['t_rec'].values
     t_pc         = MeanDopVelDataset['t_pc'].values
-    
+
     fs = 14.
 
     data5 = MeanDopVelDataset['t_pc']-273.15 # to C
@@ -266,46 +266,46 @@ for indDay in range(28, NdaysEurec4a):
     status_heater[MeanDopVelDataset.blower_status == 11] = 1.
     status_blower[MeanDopVelDataset.blower_status == 10] = 0.
     status_heater[MeanDopVelDataset.blower_status == 10] = 0.
-    time_dd = yy+'-'+mm+'-'+dd 
+    time_dd = yy+'-'+mm+'-'+dd
     t_plot = timeLocal
     data9  = status_blower
-    data10 = status_heater 
+    data10 = status_heater
     data11 = MeanDopVelDataset['tb']
     data11 = np.ma.masked_invalid(data11)
     time1 = timeStartDay
     time2 =  timeEndDay
-    
-    fig, axes = plt.subplots(figsize=[12.0, 15.0], nrows=6, sharex=True, 
+
+    fig, axes = plt.subplots(figsize=[12.0, 15.0], nrows=6, sharex=True,
                              squeeze=True, gridspec_kw = {'height_ratios':[1,1,1,1,0.5,1]})
     # ---------------------------------------------------------------------
     axes[0].plot(t_plot, data5, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
-    axes[0].axhline(y=50., color='gray', linestyle='-', linewidth = 5, alpha=0.4) 
+    axes[0].axhline(y=50., color='gray', linestyle='-', linewidth = 5, alpha=0.4)
     axes[0].set_ylabel('T_pc [$^{o}$C]', fontsize=fs)
     axes[0].text(0.01, 0.86, time_dd+" - Radar-PC temperature ",
                  transform=axes[0].transAxes, ha="left", fontsize=fs+1)
     axes[0].set_xlim(time1, time2)  # limets of the x-axes
-    axes[0].set_ylim(np.nanmin(data5)-1., 55.)  # limets of the x-axes)  # limets of the x-axes 
-    axes[0].grid(True, which="both")  
+    axes[0].set_ylim(np.nanmin(data5)-1., 55.)  # limets of the x-axes)  # limets of the x-axes
+    axes[0].grid(True, which="both")
     # ----------------------------------
     axes[1].plot(t_plot, data6, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
-    axes[1].axhline(y=40., color='gray', linestyle='-', linewidth = 5, alpha=0.4)    
+    axes[1].axhline(y=40., color='gray', linestyle='-', linewidth = 5, alpha=0.4)
     axes[1].axhline(y=36., color='gray', linestyle='-', linewidth = 5, alpha=0.4)
     axes[1].set_ylabel('T_trans [$^{o}$C]', fontsize=fs)
     axes[1].text(0.01, 0.86, time_dd+" - Transmitter temperature ",
                  transform=axes[1].transAxes, ha="left", fontsize=fs+1)
     axes[1].set_xlim(time1, time2)  # limets of the x-axes
     axes[1].set_ylim(34.5, 41.5)  # limets of the x-axes
-    axes[1].grid(True, which="both")  
+    axes[1].grid(True, which="both")
     # ---------------------------------------------------------------------
     axes[2].plot(t_plot, data7, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
-    axes[2].axhline(y=39., color='gray', linestyle='-', linewidth = 5, alpha=0.4)    
+    axes[2].axhline(y=39., color='gray', linestyle='-', linewidth = 5, alpha=0.4)
     axes[2].axhline(y=33., color='gray', linestyle='-', linewidth = 5, alpha=0.4)
     axes[2].set_ylabel('T_rec [$^{o}$C]', fontsize=fs)
     axes[2].text(0.01, 0.86, time_dd+" - Receiver temperature ",
                  transform=axes[2].transAxes, ha="left", fontsize=fs+1)
     axes[2].set_xlim(time1, time2)  # limets of the x-axes
     axes[2].set_ylim(31.5, 40.5)  # limets of the x-axes
-    axes[2].grid(True, which="both")  
+    axes[2].grid(True, which="both")
     # ---------------------------------------------------------------------
     axes[3].plot(t_plot, data8, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
     axes[3].set_ylabel('P_trans [W]', fontsize=fs)
@@ -314,7 +314,7 @@ for indDay in range(28, NdaysEurec4a):
     axes[3].set_xlim(time1, time2)  # limets of the x-axes
     axes[3].set_yscale('log', nonposy='clip')
     axes[3].set_ylim(0.005, 10.)  # limets of the x-axes
-    axes[3].grid(True, which="both")  
+    axes[3].grid(True, which="both")
     # ---------------------------------------------------------------------
     axes[4].plot(t_plot, data9,  linestyle='None', marker='o', markersize=6., mec='b',label='blower')
     axes[4].plot(t_plot, data10, linestyle='None', marker='o', markersize=2., mec='r',label='heater')
@@ -323,11 +323,11 @@ for indDay in range(28, NdaysEurec4a):
     axes[4].text(0.01, 0.74, time_dd+" - Status blower & heater ",
                  transform=axes[4].transAxes, ha="left", fontsize=fs+1)
     axes[4].set_xlim(time1, time2)  # limets of the x-axes
-    axes[4].set_ylim(-0.5, 2.)  # limets of the x-axes 
+    axes[4].set_ylim(-0.5, 2.)  # limets of the x-axes
     axes[4].set_yticks(np.arange(0,2,1))
     axes[4].set_yticklabels(['off','on'])
     axes[4].legend(loc=1, fontsize=fs-5, ncol=2, frameon=False)
-    axes[4].grid(True, which="both") 
+    axes[4].grid(True, which="both")
     # ---------------------------------------------------------------------
     axes[5].plot(t_plot, data11, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
     axes[5].set_ylabel('Tb [K]', fontsize=fs)
@@ -335,15 +335,15 @@ for indDay in range(28, NdaysEurec4a):
     axes[5].text(0.01, 0.86, time_dd+" - 89 GHz brightness temperature ",
                  transform=axes[5].transAxes, ha="left", fontsize=fs+1)
     axes[5].set_xlim(time1, time2)  # limets of the x-axes
-    axes[5].set_ylim(np.nanmin(data11)-5, np.nanmax(data11)+np.nanmax(data11)*0.1)  # limets of the x-axes 
+    axes[5].set_ylim(np.nanmin(data11)-5, np.nanmax(data11)+np.nanmax(data11)*0.1)  # limets of the x-axes
     axes[5].grid(True, which="both")
     print('status quicklook produced')
-    
+
     # -----------------------------------------------------------------------
     plt.savefig(pathFig+'/'+yy+mm+dd+'_'+radar_name+'_status.png')
-    
-  
-    
+
+
+
     # -------------------------------------------------------------------
     # --- NEXT PLOT -----------------------------------------------------
     # -------------------------------------------------------------------
@@ -364,8 +364,8 @@ for indDay in range(28, NdaysEurec4a):
     axes[0].text(0.01, 0.86, time_dd+" - Liquid Water Path "+radar_name+',(RPG processing)',
                  transform=axes[0].transAxes, ha="left", fontsize=fs+1)
     axes[0].set_xlim(time1, time2)  # limets of the x-axes
-    axes[0].set_ylim(-1., np.nanmax(data10)+10.)  # limets of the x-axes)  # limets of the x-axes 
-    axes[0].grid(True, which="both")  
+    axes[0].set_ylim(-1., np.nanmax(data10)+10.)  # limets of the x-axes)  # limets of the x-axes
+    axes[0].grid(True, which="both")
     # ----------------------------------
     axes[1].plot(t_plot, data11, linestyle='None', marker='o', markersize=3., mec='m', mfc='m')
     axes[1].set_ylabel('RR [mm h$^{-1}$]', fontsize=fs)
@@ -373,7 +373,7 @@ for indDay in range(28, NdaysEurec4a):
                  transform=axes[1].transAxes, ha="left", fontsize=fs+1)
     axes[1].set_xlim(time1, time2)  # limets of the x-axes
     axes[1].set_ylim(-0.25, np.nanmax(data11)+1.)  # limets of the x-axes
-    axes[1].grid(True, which="both")  
+    axes[1].grid(True, which="both")
     # ---------------------------------------------------------------------
     axes[2].plot(t_plot, data12, linestyle='None', marker='o', markersize=3., mec='r', mfc='r')
     axes[2].set_ylabel('T [$^{o}$C]', fontsize=fs)
@@ -381,16 +381,16 @@ for indDay in range(28, NdaysEurec4a):
                  transform=axes[2].transAxes, ha="left", fontsize=fs+1)
     axes[2].set_xlim(time1, time2)  # limets of the x-axes
     axes[2].set_ylim(np.nanmin(data12)-1, np.nanmax(data12)+1)  # limets of the x-axes
-    axes[2].grid(True, which="both")  
+    axes[2].grid(True, which="both")
     # ---------------------------------------------------------------------
-    axes[3].axhline(y=70., color='gray', linestyle='-', linewidth = 5, alpha=0.4) 
+    axes[3].axhline(y=70., color='gray', linestyle='-', linewidth = 5, alpha=0.4)
     axes[3].plot(t_plot, data13, linestyle='None', marker='o', markersize=3., mec='c', mfc='c')
     axes[3].set_ylabel('rel. humidity [%]', fontsize=fs)
     axes[3].text(0.01, 0.86, time_dd+" - Met.-station relative humidity ",
                  transform=axes[3].transAxes, ha="left", fontsize=fs+1)
     axes[3].set_xlim(time1, time2)  # limets of the x-axes
     axes[3].set_ylim(0.0, 100.)  # limets of the x-axes
-    axes[3].grid(True, which="both")  
+    axes[3].grid(True, which="both")
     # ---------------------------------------------------------------------
     axes[4].plot(t_plot, data14, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
     axes[4].set_ylabel('pressure [HPa]', fontsize=fs)
@@ -398,11 +398,10 @@ for indDay in range(28, NdaysEurec4a):
     axes[4].text(0.01, 0.86, time_dd+" - Met.-station atmospheric pressure  ",
                  transform=axes[4].transAxes, ha="left", fontsize=fs+1)
     axes[4].set_xlim(time1, time2)  # limets of the x-axes
-    #axes[4].set_ylim(-0.1, np.nanmax(data14)+0.25)  # limets of the x-axes 
-    axes[4].grid(True, which="both")   
+    #axes[4].set_ylim(-0.1, np.nanmax(data14)+0.25)  # limets of the x-axes
+    axes[4].grid(True, which="both")
     print('met data overview quicklook produced')
-    
-    # -----------------------------------------------------------------------
-    plt.savefig(pathFig+'/'+yy+mm+dd+'_'+radar_name+'_metstation.png')    
-    print('------------ quicklook done ------------')
 
+    # -----------------------------------------------------------------------
+    plt.savefig(pathFig+'/'+yy+mm+dd+'_'+radar_name+'_metstation.png')
+    print('------------ quicklook done ------------')

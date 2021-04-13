@@ -114,6 +114,8 @@ pathFig         = pathFolderTree+'/mrr/plots/mrr/'
 
 DataList        = np.sort(glob.glob(pathNcData+'*.nc'))
 
+
+
 print('filelist found: ', DataList)
 # loop on files from Albert
 for indHour,file in enumerate(DataList):
@@ -135,7 +137,9 @@ for indHour,file in enumerate(DataList):
     print('file :', radarFileName)
 
     # reading corresponding metek file
-    #MetekFile       = pathFolderTree+'/mrr/'+yy+'/'+mm+'/'+dd+'/'+yy+mm+dd+'_'+hh+'0000.nc'
+    MetekFile       = pathFolderTree+'/mrr/'+yy+'/'+mm+'/'+dd+'/'+yy+mm+dd+'_'+hh+'0000.nc'
+    print('file metek: ', MetekFile)
+
 
     # read radar height array for interpolation of model data from one single radar file
     radarDatatest          = xr.open_dataset(radarFileName)
@@ -268,8 +272,12 @@ for indHour,file in enumerate(DataList):
         fig.savefig('{path}{date}_{hour}_{varname}_quicklook_MRR.png'.format(**dict_plot), bbox_inches='tight')
         #plt.savefig(pathFig+yy+mm+dd+'_'+radar_name+'_'+varString+'_quicklooks.png', format='png', bbox_inches='tight')
 
+#%%
 
-
+# reading original data for paper plots
+origData = xr.open_dataset(MetekFile)
+Ze_orig  = origData['Zea'].values
+W_orig   = origData['VEL'].values
 
 # plot quicklook of filtered and corrected mdv for checking
 labelsizeaxes   = 14
@@ -280,56 +288,53 @@ cbarAspect      = 10
 fontSizeCbar    = 16
 rcParams['font.sans-serif'] = ['Tahoma']
 matplotlib.rcParams['savefig.dpi'] = 100
-plt.rcParams.update({'font.size':10})
+plt.rcParams.update({'font.size':14})
 grid = True
 fig, axs = plt.subplots(2, 2, figsize=(14,9), sharey=True, constrained_layout=True)
+[a.get_yaxis().tick_left() for a in axs[:,:].flatten()]
+[a.get_xaxis().tick_bottom() for a in axs[:,:].flatten()]
+[a.spines["top"].set_visible(False) for a in axs[:,:].flatten()]
+[a.spines["right"].set_visible(False) for a in axs[:,:].flatten()]
+[a.set_ylabel('Height   [m]', fontsize=fontSizeX) for a in axs[:,0].flatten()]
+[a.set_xlabel('time [hh:mm]', fontsize=fontSizeX) for a in axs[0,:].flatten()]
+[a.set_xlabel('time [mm:ss]', fontsize=fontSizeX) for a in axs[1,:].flatten()]
 
 # build colorbar
-mesh = axs[0,0].pcolormesh(datetimeM, height, Ze.T, vmin=-10, vmax=40, cmap='jet', rasterized=True)
-axs[0,0].set_title('Original')
-axs[0,0].spines["top"].set_visible(False)
-axs[0,0].spines["right"].set_visible(False)
-axs[0,0].get_xaxis().tick_bottom()
-axs[0,0].get_yaxis().tick_left()
+mincm = -20.
+maxcm = 40.
+step = 1.
+colors =['#4f8c9d', '#1c4c5e', '#8ae1f9', '#8f0f1b', '#e0bfb4', '#754643', '#ef7e58', '#ff1c5d']
+cmap, ticks, norm, bounds =  f_defineSingleColorPalette(colors, mincm, maxcm, step)
+mesh = axs[0,0].pcolormesh(datetimeM, height, Ze_orig.T, vmin=-20, vmax=40, cmap=cmap, rasterized=True)
 axs[0,0].set_xlim(datetimeM[0], datetimeM[-1])
 
-
-mesh = axs[0,1].pcolormesh(datetimeM, height, RR.T, vmin=0., vmax=2.,  cmap='jet', rasterized=True)
+mesh = axs[0,1].pcolormesh(datetimeM, height, Ze.T, vmin=-20., vmax=40.,  cmap=cmap, rasterized=True)
+axs[0,0].axvline(x=pd.to_datetime(timeStartDay),  color='black', linestyle=':', linewidth=4)
+axs[0,0].axvline(x=pd.to_datetime(timeEndDay),  color='black', linestyle=':', linewidth=4)
+axs[0,1].axvline(x=pd.to_datetime(timeStartDay), color='black', linestyle=':', linewidth=4)
+axs[0,1].axvline(x=pd.to_datetime(timeEndDay), color='black', linestyle=':', linewidth=4)
 #[a.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M')) for a in axs.flatten()]
-axs[0,1].spines["top"].set_visible(False)
-axs[0,1].spines["right"].set_visible(False)
-axs[0,1].get_xaxis().tick_bottom()
-axs[0,1].get_yaxis().tick_left()
-axs[0,1].set_title('Filtered', fontsize=fontSizeX)
 axs[0,1].set_xlim(datetimeM[0], datetimeM[-1])
+cbar = fig.colorbar(mesh, ax=axs[0,:], label='Attenuated reflectivity [dBz]', location='right', aspect=20, use_gridspec=grid)
+cbar.set_label(label='Attenuated reflectivity [dBz]', size=fontSizeCbar)
 
-axs[0,0].set_ylabel('Height   [m]', fontsize=fontSizeX)
-axs[0,0].set_xlabel('time [hh:mm]', fontsize=fontSizeX)
-axs[0,1].set_xlabel('time [hh:mm]', fontsize=fontSizeX)
-axs[1,0].set_xlabel('time [mm:ss]', fontsize=fontSizeX)
-axs[1,1].set_xlabel('time [mm:ss]', fontsize=fontSizeX)
 [a.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M')) for a in axs[0,:].flatten()]
+#[a.set_ylim(30., 1200.) for a in axs[0,:].flatten()]
 
-mesh = axs[1,0].pcolormesh(datetimeM, height, LWC.T, vmin=0., vmax=0.5, cmap='jet', rasterized=True)
-axs[1,0].set_title('Original')
-axs[1,0].spines["top"].set_visible(False)
-axs[1,0].spines["right"].set_visible(False)
-axs[1,0].get_xaxis().tick_bottom()
-axs[1,0].get_yaxis().tick_left()
-axs[1,0].set_xlim(datetimeM[0], datetimeM[-1])
+colorsLower = ["#4553c2", "#2b19d9", "#d0d2f0", "#42455e", "#66abf9"]# grigio: 8c8fab
+colorsUpper = ["#fd2c3b", "#59413f", "#fdc7cc", "#8f323c", "#e66c4c", "#ae8788"] #MDV
+cmap, ticks, norm, bounds =  f_defineDoubleColorPalette(colorsLower, colorsUpper, -10., 2., 0.1, 0.)
+mesh = axs[1,0].pcolormesh(datetimeM, height, -W_orig.T, vmin=-10., vmax=2., cmap=cmap, rasterized=True)
+axs[1,0].set_xlim(timeStartDay, timeEndDay)
 
-mesh = axs[1,1].pcolormesh(datetimeM, height, W.T, vmin=-10, vmax=20, cmap='jet', rasterized=True)
-axs[1,1].set_title('ship motions corrected')
-axs[1,1].spines["top"].set_visible(False)
-axs[1,1].spines["right"].set_visible(False)
-axs[1,1].get_xaxis().tick_bottom()
-axs[1,1].get_yaxis().tick_left()
-axs[1,1].set_xlim(datetimeM[0], datetimeM[-1])
+mesh = axs[1,1].pcolormesh(datetimeM, height, -W.T, vmin=-10, vmax=2., cmap=cmap, rasterized=True)
+axs[1,1].set_xlim(timeStartDay, timeEndDay)
 [a.xaxis.set_major_formatter(mdates.DateFormatter('%M:%S')) for a in axs[1,:].flatten()]
-fig.colorbar(mesh, ax=axs[:,-1], label='Doppler velocity [$ms^{-1}$]', location='right', aspect=60, use_gridspec=grid)
-for ax, l in zip(axs.flatten(), ['(a)', '(b)', '(c)', '(d)']):
+[a.set_ylim(50., 1200.) for a in axs[:,:].flatten()]
+
+cbar = fig.colorbar(mesh, ax=axs[1,:], label='Doppler velocity [$ms^{-1}$]', location='right', aspect=20, use_gridspec=grid)
+cbar.set_label(label='Doppler velocity [$ms^{-1}$]', size=fontSizeCbar)
+for ax, l in zip(axs.flatten(), ['(a) Original', '(b) Filtered', '(c) Original', '(d) Filtered and ship motions corrected']):
     ax.text(0, 1.02, l,  fontweight='black', transform=ax.transAxes)
 fig.savefig('{path}{date}_{hour}_quicklook_MRR.png'.format(**dict_plot))#pathFig+date+'_'+hour+'quicklook_MRR.png')
 fig.savefig('{path}{date}_{hour}_quicklook_MRR.pdf'.format(**dict_plot))
-#fig.savefig(pathFig+date+'_'+hour+'quicklook_MRR.png')
-#fig.savefig(pathFig+date+'_'+hour+'quicklook_MRR.pdf')

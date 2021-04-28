@@ -2,21 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jul 22 10:42:54 2020
-@ date; 22 march 2021
+@ date; 28 april 2021
 @author: cacquist
-@goal: this script has the goal of correcting for ship motions the MRR data collected on the ship and remove the
-interference noise the data show.
-To achieve this goal, the script needs to have two different input files, i.e. the MRR original data and the data
-postprocessed by Albert. This double input is needed because the algorithm from Albert provides Doppler spectra pretty much filtered
-from noise, but not entirely. The w matrix instead is not filtered, and for this reason, data from the original file are needed.
-The filtering algorithm developed in fact, provides a detailed mask for filtering noise that works only when reading the original spectra as
-input. To calculate the ship motion correction, W field filtered from nthe interference pattern is needed. For this reason,
-the script works as follows:
-    - it first applies the filtering mask on the original data. From them, it filters the mean Doppler velocity.
-    - from the filtered mean doppler velocity, it applies the algorithm for ship motion correction and obtains the doppler shift corresponding to each pixel.
-    - It applies the doppler shift to the Doppler spectra obtained from Albert.
-    - it produces a quicklook containing: original mdv, filtered mdv, mdv /ship time matching, doppler spectra shifted vs original.
-    - it saves the shifted doppler spectra and the filtering mask applied in a ncdf file to be sent to albert.
+@goal: produce daily and hourly quicklooks of MRR data 
 
 """
 
@@ -103,69 +91,41 @@ def f_defineDoubleColorPalette(colorsLower, colorsUpper, minVal, maxVal, step, t
 
     return(cmap, ticks, norm, bounds)
 
-
-
-
 # reading file list and its path
 # establishing paths for data input and output
-pathFolderTree  = '/Volumes/Extreme SSD/ship_motion_correction_merian/'
-pathNcData      = pathFolderTree+'/mrr/corrected_2ways/'
-pathFig         = pathFolderTree+'/mrr/plots/mrr/'
+pathNcData      = '/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/second_step/'
+pathFig         = '/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/plots/'
+pathFigHour     = '/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/plots/hourly_plots/'
+DataList        = np.sort(glob.glob(pathNcData+'*eurec4a.nc'))
 
-DataList        = np.sort(glob.glob(pathNcData+'*.nc'))
+print('files found: ', DataList)
 
 
-
-print('filelist found: ', DataList)
-# loop on files from Albert
-for indHour,file in enumerate(DataList):
+for indDay,file in enumerate(DataList):
+    
     date_hour       = file[len(pathNcData):len(pathNcData)+8]
 
-    yy              = date_hour[4:8]
-    mm              = date_hour[2:4]
-    dd              = date_hour[0:2]
-    hh              = file[len(pathNcData)+9:len(pathNcData)+11]
+    yy              = date_hour[0:4]
+    mm              = date_hour[4:6]
+    dd              = date_hour[6:8]
 
-    print(yy,mm,dd,hh)
+    print(yy,mm,dd)
+    
     # setting dates strings
     date            = dd+mm+yy      #'04022020'
     dateRadar       = yy[0:2]+mm+dd #'200204'
     dateReverse     = yy+mm+dd      #'20200204'
 
-    #def dict for data plotting
-    radarFileName   = DataList[indHour]
+    radarFileName   = DataList[indDay]
     print('file :', radarFileName)
 
-    # reading corresponding metek file
-    MetekFile       = pathFolderTree+'/mrr/'+yy+'/'+mm+'/'+dd+'/'+yy+mm+dd+'_'+hh+'0000.nc'
-    print('file metek: ', MetekFile)
 
-
-    # read radar height array for interpolation of model data from one single radar file
-    radarDatatest          = xr.open_dataset(radarFileName)
-    height                 = radarDatatest['Height'].values
-    mask                   = radarDatatest['mask'].values
-    RR                     = radarDatatest['RR'].values
-    Ze                     = radarDatatest['Zea'].values
-    LWC                    = radarDatatest['LWC'].values
-    W                      = radarDatatest['W'].values
-    time                   = radarDatatest['time'].values
-    units_time             = 'seconds since 1970-01-01 00:00:00'
-    datetimeM              = pd.to_datetime(time, unit ='s', origin='unix')
-
-    print('file data read for : '+date_hour)
-
-    print('----------------------')
-
-    # filtering data based on the mask
-    Ze[mask == 0]  = np.nan
-    RR[mask == 0]  = np.nan
-    LWC[mask == 0] = np.nan
-    W[mask == 0]   = np.nan
-
+    # read MRR data
+    radarData          = xr.open_dataset(radarFileName)
+    
 
     # set here the variable you want to plot
-    varStringArr = ['Ze', 'RR', 'LWC', 'W', ]
+    varStringArr = ['Zea', 'RR', 'LWC', 'W', ]
 
 
     for ivar,varSel in enumerate(varStringArr):
@@ -173,59 +133,59 @@ for indHour,file in enumerate(DataList):
         print('producing quicklook of '+varStringArr[ivar])
         varString = varStringArr[ivar]
         # settings for reflectivity
-        if varString == 'Ze':
+        if varString == 'Zea':
             mincm = -20.
             maxcm = 40.
             step = 1.
             colors =['#4f8c9d', '#1c4c5e', '#8ae1f9', '#8f0f1b', '#e0bfb4', '#754643', '#ef7e58', '#ff1c5d']
             cmap, ticks, norm, bounds =  f_defineSingleColorPalette(colors, mincm, maxcm, step)
-            var = Ze
+            var = radarData.Zea.values
             cbarstr = 'Ze [dBz]'
-            strTitle = 'Attenuated reflectivity : '+dd+'.'+mm+'.'+yy
-            dict_plot = {'path':pathFig, 'date':date, 'hour':str(hh), 'varname':varSel}
+            strTitle = 'MRR - Equivalent reflectivity attenuated: '+dd+'.'+mm+'.'+yy
+            dict_plot = {'path':pathFig, 'date':date, 'varname':varSel}
 
             # settings for mean Doppler velocity
         elif varString == 'W':
-                mincm = -10.
-                maxcm = 2.
-                step = 0.1
-                thrs = 0.
-                colorsLower = ["#4553c2", "#2b19d9", "#d0d2f0", "#42455e", "#66abf9"]# grigio: 8c8fab
-                colorsUpper = ["#fd2c3b", "#59413f", "#fdc7cc", "#8f323c", "#e66c4c", "#ae8788"] #MDV
-                cmap, ticks, norm, bounds =  f_defineDoubleColorPalette(colorsLower, colorsUpper, mincm, maxcm, step, thrs)
-                var = -W
-                cbarstr = 'Vd [$ms^{-1}$]'
-                strTitle = 'Fall speed : '+dd+'.'+mm+'.'+yy
-                dict_plot = {'path':pathFig, 'date':date, 'hour':str(hh), 'varname':varSel}
+            mincm = -10.
+            maxcm = 2.
+            step = 0.1
+            thrs = 0.
+            colorsLower = ["#4553c2", "#2b19d9", "#d0d2f0", "#42455e", "#66abf9"]# grigio: 8c8fab
+            colorsUpper = ["#fd2c3b", "#59413f", "#fdc7cc", "#8f323c", "#e66c4c", "#ae8788"] #MDV
+            cmap, ticks, norm, bounds =  f_defineDoubleColorPalette(colorsLower, colorsUpper, mincm, maxcm, step, thrs)
+            var = -radarData.fall_speed.values
+            cbarstr = 'Fall speed [$ms^{-1}$]'
+            strTitle = 'MRR - Fall speed : '+dd+'.'+mm+'.'+yy
+            dict_plot = {'path':pathFig, 'date':date, 'varname':varSel}
 
             # settings for Spectral width
         elif varString == 'RR':
-                mincm = 0.
-                maxcm = 0.8
-                step = 0.01
-                #colors = ["#72e5ef", "#460942", "#4dc172", "#cd71b5", "#274c56", "#91ec17", "#b00bd9", "#abc177"]
-                colors = [ "#e6bcbe", "#51443f", "#f17a74", "#e81659", "#cdd2df", "#124ac1"]
-                cmap, ticks, norm, bounds =  f_defineSingleColorPalette(colors, mincm, maxcm, step)
-                var = RR
-                cbarstr = 'RR [$mmh^{-1}$]'
-                strTitle = 'Rain rate : '+dd+'.'+mm+'.'+yy
-                dict_plot = {'path':pathFig, 'date':date, 'hour':str(hh), 'varname':varSel}
+            mincm = 0.
+            maxcm = 0.8
+            step = 0.01
+            #colors = ["#72e5ef", "#460942", "#4dc172", "#cd71b5", "#274c56", "#91ec17", "#b00bd9", "#abc177"]
+            colors = [ "#e6bcbe", "#51443f", "#f17a74", "#e81659", "#cdd2df", "#124ac1"]
+            cmap, ticks, norm, bounds =  f_defineSingleColorPalette(colors, mincm, maxcm, step)
+            var = radarData.rain_rate.values
+            cbarstr = 'Rainfall rate [$mmh^{-1}$]'
+            strTitle = 'MRR - Rainfall rate : '+dd+'.'+mm+'.'+yy
+            dict_plot = {'path':pathFig, 'date':date, 'varname':varSel}
 
             # settings for skewness
         elif varString == 'LWC':
-                mincm = 0.
-                maxcm = 1.
-                step = 0.01
-                thrs = 0.
-                colors = [ "#e6bcbe", "#51443f", "#f17a74", "#e81659", "#cdd2df", "#124ac1"]
-                cmap, ticks, norm, bounds =  f_defineSingleColorPalette(colors, mincm, maxcm, step)
-                var = LWC
-                cbarstr = '$LWC$ [$gm^{-3}$]'
-                strTitle = 'Liquid water content : '+dd+'.'+mm+'.'+yy
-                dict_plot = {'path':pathFig, 'date':date, 'hour':str(hh), 'varname':varSel}
+            mincm = 0.
+            maxcm = 1.
+            step = 0.01
+            thrs = 0.
+            colors = [ "#e6bcbe", "#51443f", "#f17a74", "#e81659", "#cdd2df", "#124ac1"]
+            cmap, ticks, norm, bounds =  f_defineSingleColorPalette(colors, mincm, maxcm, step)
+            var = radarData.liquid_water_content.values
+            cbarstr = '$LWC$ [$gm^{-3}$]'
+            strTitle = 'MRR - Liquid water content : '+dd+'.'+mm+'.'+yy
+            dict_plot = {'path':pathFig, 'date':date,  'varname':varSel}
 
-        timeStartDay = datetime(2020,2,13,1,32,0)#datetimeM[0]#
-        timeEndDay   = datetime(2020,2,13,1,35,0)#datetimeM[-1]#
+        timeStartDay = radarData.time.values[0]#datetime(2020,2,13,1,32,0)#datetimeM[0]#
+        timeEndDay   = radarData.time.values[-1]#datetime(2020,2,13,1,35,0)#datetimeM[-1]#
         hmin         = 0.
         hmax         = 1200.
         ystring       = cbarstr
@@ -235,9 +195,9 @@ for indHour,file in enumerate(DataList):
         fontSizeY     = 16
         cbarAspect    = 10
         fontSizeCbar  = 16
-        yyPlot        = datetimeM[0].year
-        mmPlot        = datetimeM[0].month
-        ddPlot        = datetimeM[0].day
+        yyPlot        = pd.to_datetime(timeStartDay).year
+        mmPlot        = pd.to_datetime(timeStartDay).month
+        ddPlot        = pd.to_datetime(timeStartDay).day
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12,6))
         rcParams['font.sans-serif'] = ['Tahoma']
         matplotlib.rcParams['savefig.dpi'] = 100
@@ -256,7 +216,7 @@ for indHour,file in enumerate(DataList):
         ax.axvline(x=pd.to_datetime(datetime(yyPlot,mmPlot,ddPlot,6,30,0,0)), color='black',linewidth=4, linestyle=':')
         ax.axvline(x=pd.to_datetime(datetime(yyPlot,mmPlot,ddPlot,19,15,0,0)), color='black', linewidth=4, linestyle=':')
 
-        cax = ax.pcolormesh(datetimeM, height, var.transpose(), vmin=mincm, vmax=maxcm, cmap=cmap)
+        cax = ax.pcolormesh(pd.to_datetime(radarData.time.values), radarData.height.values, var.transpose(), vmin=mincm, vmax=maxcm, cmap=cmap)
         ax.set_ylim(hmin,hmax)                                               # limits of the y-axesn  cmap=plt.cm.get_cmap("viridis", 256)
         ax.set_xlim(timeStartDay, timeEndDay)                                 # limits of the x-axes
         ax.set_title(strTitle, fontsize=fontSizeTitle, loc='left')
@@ -269,72 +229,131 @@ for indHour,file in enumerate(DataList):
         # but the bottom spine
 
         fig.tight_layout()
-        fig.savefig('{path}{date}_{hour}_{varname}_quicklook_MRR.png'.format(**dict_plot), bbox_inches='tight')
+        fig.savefig('{path}{date}_{varname}_quicklook_MRR.png'.format(**dict_plot), bbox_inches='tight')
         #plt.savefig(pathFig+yy+mm+dd+'_'+radar_name+'_'+varString+'_quicklooks.png', format='png', bbox_inches='tight')
+        
+    
 
+    # producing now hourly plots
+    hourArr     = pd.date_range(pd.to_datetime(radarData.time.values[0]),pd.to_datetime(radarData.time.values[-1]),freq='h')
+
+    # loop on the hours of the day
+    for indHour in range(len(hourArr)-1):
+        
+        # establishing the string associated to the hour
+        hour = str(hourArr[indHour].hour)
+        if len(hour) == 1:
+            hour = '0'+hour
+        
+        # slicing the dataset for the corresponding time interval
+        if indHour != 23:
+            slicedData = radarData.sel(time=slice(hourArr[indHour], hourArr[indHour+1]))
+        else:
+            slicedData = radarData.sel(time=slice(hourArr[indHour], pd.to_datetime(datetime(yyPlot,mmPlot,ddPlot,23,59,59))))
+        
+    
+        # set here the variable you want to plot
+        varStringArr = ['Zea', 'RR', 'LWC', 'W', ]
+    
+    
+        for ivar,varSel in enumerate(varStringArr):
+    
+            print('producing quicklook of '+varStringArr[ivar])
+            varString = varStringArr[ivar]
+            # settings for reflectivity
+            if varString == 'Zea':
+                mincm = -20.
+                maxcm = 40.
+                step = 1.
+                colors =['#4f8c9d', '#1c4c5e', '#8ae1f9', '#8f0f1b', '#e0bfb4', '#754643', '#ef7e58', '#ff1c5d']
+                cmap, ticks, norm, bounds =  f_defineSingleColorPalette(colors, mincm, maxcm, step)
+                var = slicedData.Zea.values
+                cbarstr = 'Ze [dBz]'
+                strTitle = 'MRR - Equivalent reflectivity attenuated: '+dd+'.'+mm+'.'+yy
+                dict_plot = {'path':pathFigHour, 'date':date, 'hour':hour, 'varname':varSel}
+    
+                # settings for mean Doppler velocity
+            elif varString == 'W':
+                mincm = -10.
+                maxcm = 2.
+                step = 0.1
+                thrs = 0.
+                colorsLower = ["#4553c2", "#2b19d9", "#d0d2f0", "#42455e", "#66abf9"]# grigio: 8c8fab
+                colorsUpper = ["#fd2c3b", "#59413f", "#fdc7cc", "#8f323c", "#e66c4c", "#ae8788"] #MDV
+                cmap, ticks, norm, bounds =  f_defineDoubleColorPalette(colorsLower, colorsUpper, mincm, maxcm, step, thrs)
+                var = -slicedData.fall_speed.values
+                cbarstr = 'Fall speed [$ms^{-1}$]'
+                strTitle = 'MRR - Fall speed : '+dd+'.'+mm+'.'+yy
+                dict_plot = {'path':pathFigHour, 'date':date,  'hour':hour, 'varname':varSel}
+    
+                # settings for Spectral width
+            elif varString == 'RR':
+                mincm = 0.
+                maxcm = 0.8
+                step = 0.01
+                #colors = ["#72e5ef", "#460942", "#4dc172", "#cd71b5", "#274c56", "#91ec17", "#b00bd9", "#abc177"]
+                colors = [ "#e6bcbe", "#51443f", "#f17a74", "#e81659", "#cdd2df", "#124ac1"]
+                cmap, ticks, norm, bounds =  f_defineSingleColorPalette(colors, mincm, maxcm, step)
+                var = slicedData.rain_rate.values
+                cbarstr = 'Rainfall rate [$mmh^{-1}$]'
+                strTitle = 'MRR - Rainfall rate : '+dd+'.'+mm+'.'+yy
+                dict_plot = {'path':pathFigHour, 'date':date,  'hour':hour, 'varname':varSel}
+    
+                # settings for skewness
+            elif varString == 'LWC':
+                mincm = 0.
+                maxcm = 1.
+                step = 0.01
+                thrs = 0.
+                colors = [ "#e6bcbe", "#51443f", "#f17a74", "#e81659", "#cdd2df", "#124ac1"]
+                cmap, ticks, norm, bounds =  f_defineSingleColorPalette(colors, mincm, maxcm, step)
+                var = slicedData.liquid_water_content.values
+                cbarstr = '$LWC$ [$gm^{-3}$]'
+                strTitle = 'MRR - Liquid water content : '+dd+'.'+mm+'.'+yy
+                dict_plot = {'path':pathFigHour, 'date':date,   'hour':hour, 'varname':varSel}
+    
+            timeStartDay = slicedData.time.values[0]#datetime(2020,2,13,1,32,0)#datetimeM[0]#
+            timeEndDay   = slicedData.time.values[-1]#datetime(2020,2,13,1,35,0)#datetimeM[-1]#
+            hmin         = 0.
+            hmax         = 1200.
+            ystring       = cbarstr
+            labelsizeaxes = 16
+            fontSizeTitle = 16
+            fontSizeX     = 16
+            fontSizeY     = 16
+            cbarAspect    = 10
+            fontSizeCbar  = 16
+            yyPlot        = pd.to_datetime(timeStartDay).year
+            mmPlot        = pd.to_datetime(timeStartDay).month
+            ddPlot        = pd.to_datetime(timeStartDay).day
+            fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12,6))
+            rcParams['font.sans-serif'] = ['Tahoma']
+            matplotlib.rcParams['savefig.dpi'] = 100
+            plt.gcf().subplots_adjust(bottom=0.15)
+            fig.tight_layout()
+            ax = plt.subplot(1,1,1)
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+            ax.get_xaxis().tick_bottom()
+            ax.get_yaxis().tick_left()
+            matplotlib.rc('xtick', labelsize=labelsizeaxes)  # sets dimension of ticks in the plots
+            matplotlib.rc('ytick', labelsize=labelsizeaxes)  # sets dimension of ticks in the plots
+            ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+            ax.xaxis.set_minor_formatter(mdates.DateFormatter("%H:%M"))
+            ax.xaxis_date()
+    
+            cax = ax.pcolormesh(pd.to_datetime(slicedData.time.values), slicedData.height.values, var.transpose(), vmin=mincm, vmax=maxcm, cmap=cmap)
+            ax.set_ylim(hmin,hmax)                                               # limits of the y-axesn  cmap=plt.cm.get_cmap("viridis", 256)
+            ax.set_xlim(timeStartDay, timeEndDay)                                 # limits of the x-axes
+            ax.set_title(strTitle, fontsize=fontSizeTitle, loc='left')
+            ax.set_xlabel("Time (UTC) [hh:mm]", fontsize=fontSizeX)
+            ax.set_ylabel("Height [$m$]", fontsize=fontSizeY)
+            cbar = fig.colorbar(cax, orientation='vertical', aspect=cbarAspect)
+            cbar.set_label(label=cbarstr, size=fontSizeCbar)
+            cbar.ax.tick_params(labelsize=labelsizeaxes)
+            # Turn on the frame for the twin axis, but then hide all
+            # but the bottom spine
+    
+            fig.tight_layout()
+            fig.savefig('{path}{date}_{hour}_{varname}_quicklook_MRR.png'.format(**dict_plot), bbox_inches='tight')
 #%%
-
-# reading original data for paper plots
-origData = xr.open_dataset(MetekFile)
-Ze_orig  = origData['Zea'].values
-W_orig   = origData['VEL'].values
-
-# plot quicklook of filtered and corrected mdv for checking
-labelsizeaxes   = 14
-fontSizeTitle   = 16
-fontSizeX       = 16
-fontSizeY       = 16
-cbarAspect      = 10
-fontSizeCbar    = 16
-rcParams['font.sans-serif'] = ['Tahoma']
-matplotlib.rcParams['savefig.dpi'] = 100
-plt.rcParams.update({'font.size':14})
-grid = True
-fig, axs = plt.subplots(2, 2, figsize=(14,9), sharey=True, constrained_layout=True)
-[a.get_yaxis().tick_left() for a in axs[:,:].flatten()]
-[a.get_xaxis().tick_bottom() for a in axs[:,:].flatten()]
-[a.spines["top"].set_visible(False) for a in axs[:,:].flatten()]
-[a.spines["right"].set_visible(False) for a in axs[:,:].flatten()]
-[a.set_ylabel('Height   [m]', fontsize=fontSizeX) for a in axs[:,0].flatten()]
-[a.set_xlabel('time [hh:mm]', fontsize=fontSizeX) for a in axs[0,:].flatten()]
-[a.set_xlabel('time [mm:ss]', fontsize=fontSizeX) for a in axs[1,:].flatten()]
-
-# build colorbar
-mincm = -20.
-maxcm = 40.
-step = 1.
-colors =['#4f8c9d', '#1c4c5e', '#8ae1f9', '#8f0f1b', '#e0bfb4', '#754643', '#ef7e58', '#ff1c5d']
-cmap, ticks, norm, bounds =  f_defineSingleColorPalette(colors, mincm, maxcm, step)
-mesh = axs[0,0].pcolormesh(datetimeM, height, Ze_orig.T, vmin=-20, vmax=40, cmap=cmap, rasterized=True)
-axs[0,0].set_xlim(datetimeM[0], datetimeM[-1])
-
-mesh = axs[0,1].pcolormesh(datetimeM, height, Ze.T, vmin=-20., vmax=40.,  cmap=cmap, rasterized=True)
-axs[0,0].axvline(x=pd.to_datetime(timeStartDay),  color='black', linestyle=':', linewidth=4)
-axs[0,0].axvline(x=pd.to_datetime(timeEndDay),  color='black', linestyle=':', linewidth=4)
-axs[0,1].axvline(x=pd.to_datetime(timeStartDay), color='black', linestyle=':', linewidth=4)
-axs[0,1].axvline(x=pd.to_datetime(timeEndDay), color='black', linestyle=':', linewidth=4)
-#[a.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M')) for a in axs.flatten()]
-axs[0,1].set_xlim(datetimeM[0], datetimeM[-1])
-cbar = fig.colorbar(mesh, ax=axs[0,:], label='Attenuated reflectivity [dBz]', location='right', aspect=20, use_gridspec=grid)
-cbar.set_label(label='Attenuated reflectivity [dBz]', size=fontSizeCbar)
-
-[a.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M')) for a in axs[0,:].flatten()]
-#[a.set_ylim(30., 1200.) for a in axs[0,:].flatten()]
-
-colorsLower = ["#4553c2", "#2b19d9", "#d0d2f0", "#42455e", "#66abf9"]# grigio: 8c8fab
-colorsUpper = ["#fd2c3b", "#59413f", "#fdc7cc", "#8f323c", "#e66c4c", "#ae8788"] #MDV
-cmap, ticks, norm, bounds =  f_defineDoubleColorPalette(colorsLower, colorsUpper, -10., 2., 0.1, 0.)
-mesh = axs[1,0].pcolormesh(datetimeM, height, -W_orig.T, vmin=-10., vmax=2., cmap=cmap, rasterized=True)
-axs[1,0].set_xlim(timeStartDay, timeEndDay)
-
-mesh = axs[1,1].pcolormesh(datetimeM, height, -W.T, vmin=-10, vmax=2., cmap=cmap, rasterized=True)
-axs[1,1].set_xlim(timeStartDay, timeEndDay)
-[a.xaxis.set_major_formatter(mdates.DateFormatter('%M:%S')) for a in axs[1,:].flatten()]
-[a.set_ylim(50., 1200.) for a in axs[:,:].flatten()]
-
-cbar = fig.colorbar(mesh, ax=axs[1,:], label='Doppler velocity [$ms^{-1}$]', location='right', aspect=20, use_gridspec=grid)
-cbar.set_label(label='Doppler velocity [$ms^{-1}$]', size=fontSizeCbar)
-for ax, l in zip(axs.flatten(), ['(a) Original', '(b) Filtered', '(c) Original', '(d) Filtered and ship motions corrected']):
-    ax.text(0, 1.02, l,  fontweight='black', transform=ax.transAxes)
-fig.savefig('{path}{date}_{hour}_quicklook_MRR.png'.format(**dict_plot))#pathFig+date+'_'+hour+'quicklook_MRR.png')
-fig.savefig('{path}{date}_{hour}_quicklook_MRR.pdf'.format(**dict_plot))

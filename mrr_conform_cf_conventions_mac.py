@@ -38,8 +38,8 @@ def generate_preprocess(): # can take arguments
     '''
     import numpy as np
     import xarray as xr
-
-
+    
+    
 
     # Generate a preprocess function that takes a dataset as only argument and does all the processing needed
     def preprocess(ds):
@@ -59,12 +59,12 @@ def generate_preprocess(): # can take arguments
             new dataset with var2DropList variables removed and varList variables modified
 
         '''
-
-        # redefining time coordinate
+        
+        # redefining time coordinate 
         # reading time variables ( seconds since the beginning of the hour)
-        #secs = ds['time'].values
-
-        # assign a new time coordinate defined as seconds since
+        #secs = ds['time'].values    
+        
+        # assign a new time coordinate defined as seconds since 
         #ds = ds.assign_coords({'time':[datetime_val + timedelta(seconds=int(n_sec)) for ind_sec, n_sec in enumerate(secs)]})
 
         # assign new coordinate for dependencies not specified
@@ -85,7 +85,7 @@ def generate_preprocess(): # can take arguments
 
         for indDrop in range(len(var2DropList)):
             ds = ds.drop(var2DropList[indDrop])
-
+        
         ds.drop('Dm_ax')
         ds.drop('Nw_ax')
         ds.drop('PIA_Height')
@@ -130,30 +130,28 @@ def generate_preprocess(): # can take arguments
 
 
 # reading ship data for lat/lon
-shipFile = '/work/cacquist/TRADE_PREC_CYCLE/SHIP_MOTIONS_CORRECTIONS/ncdf_ancillary/ship_data/new/shipData_all2.nc'
+shipFile = '/Volumes/Extreme SSD/ship_motion_correction_merian/ship_data/new/shipData_all2.nc'
 shipData = xr.open_dataset(shipFile)
 
-folders = ['20200125']
-# days already processed '20200127','20200126','20200128','20200129','20200130','20200131'
+folders = ['20200127']
+# days already processed '20200122' ,'20200123', '20200125', '20200126', '20200127', '20200128', '20200129', '20200130', '20200131',
 
 for i_folder, fold in enumerate(folders):
 
     # read list of hourly files for the day corresponding to the folder
-    fileList = np.sort(glob.glob('/work/cacquist/TRADE_PREC_CYCLE/SHIP_MOTIONS_CORRECTIONS/mrr/second_step/'+fold+'/high_res/*.nc'))
-
-    print(fileList)
-    strasula
+    fileList = np.sort(glob.glob('/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/second_step/'+fold+'/*.nc'))
+    
     # setting output path for final file
-    path_out = '/work/cacquist/TRADE_PREC_CYCLE/SHIP_MOTIONS_CORRECTIONS/mrr/final_version/'
-
+    path_out = '/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/second_step/'
+    
     # changing time coordinat and adding a proper coordinate
     for indDay, fileStr in enumerate(fileList):
         print(indDay, fileStr)
-        lenstr = len('/work/cacquist/TRADE_PREC_CYCLE/SHIP_MOTIONS_CORRECTIONS/mrr/second_step/'+fold+'/')
+        lenstr = len('/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/second_step/'+fold+'/')
         print('reading files for the hour: ', fileStr[lenstr:lenstr+11])
-        file_test_out = '/work/cacquist/TRADE_PREC_CYCLE/SHIP_MOTIONS_CORRECTIONS/mrr/final_version/test/'+fileStr[lenstr:]
+        file_test_out = '/Users/claudia/Downloads/test/'+fileStr[lenstr:]
         print(file_test_out)
-
+        
         date_hour       = fileStr[lenstr:lenstr+11]
         yy              = date_hour[4:8]
         mm              = date_hour[2:4]
@@ -166,22 +164,22 @@ for i_folder, fold in enumerate(folders):
         dateReverse     = yy+mm+dd      #'20200204'
 
         datetime_val = pd.to_datetime(datetime(int(yy), int(mm), int(dd), int(hh), 0, 0))
-
+    
         # reading data from the file
         ds = xr.open_dataset(fileStr)
-        secs = ds['time'].values
+        secs = ds['time'].values        
         # rename time as time old
         #ds = ds.rename({'time': 'time_old'})
-
+        
         # define new time coordinate
         ds = ds.assign_coords({'time':[datetime_val + timedelta(seconds=int(n_sec)) for ind_sec, n_sec in enumerate(secs)]})
 
-        ds.to_netcdf('/work/cacquist/TRADE_PREC_CYCLE/SHIP_MOTIONS_CORRECTIONS/mrr/final_version/test/'+dateReverse+'_'+hh+'_mrr.nc')
-
-
-    fileListTest = np.sort(glob.glob('/work/cacquist/TRADE_PREC_CYCLE/SHIP_MOTIONS_CORRECTIONS/mrr/final_version/test/'+dateReverse+'_*.nc'))
-
-
+        ds.to_netcdf('/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/second_step/'+fold+'/temp/'+dateReverse+'_'+hh+'_mrr.nc')
+            
+    
+    fileListTest = np.sort(glob.glob('/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/second_step/'+fold+'/temp/*.nc'))
+    
+   
     # creating daily file for the dataset
     #print('processing day : '+yy+'/'+mm+'/'+dd)
     print("*************************************************")
@@ -192,50 +190,50 @@ for i_folder, fold in enumerate(folders):
                                   )
     #removing wrong time coordinate
     day_data = day_data.drop('time')
-
+    
     # renaming as time the time_utc coordinate
     day_data = day_data.rename({'time_utc':'time'})
 
-    # filtering data using the interference noise mask developed
+    # filtering data using the interference noise mask developed 
     day_data = day_data.where(day_data.mask !=  0)
-
+    
     # defining a new mask to filter interference present in lowest 200 m
     ds = day_data.sel(Height=slice(0,200.))
-
+    
     # defining the new mask as zeros/ones based on Ze ==np.nan/!=np.nan
     newmask = np.zeros((len(ds.time.values), len(ds.Height.values)))
     newmask[~np.isnan(ds.Zea.values)] = 1
-
+    
     # calculating sum of mask elements in the lowest 200 m
     sumMask = np.sum(newmask, axis=1)
-
-    # when the sum of the  number of pixels where mask == 1 is smaller than 10,
-    # we consider that as interference. The threshold is taken considering that
-    # in 200 m we have 19 range gates, hence we ask that at least half of them have
+    
+    # when the sum of the  number of pixels where mask == 1 is smaller than 10, 
+    # we consider that as interference. The threshold is taken considering that 
+    # in 200 m we have 19 range gates, hence we ask that at least half of them have 
     # data in it, for the signal to be not noise
     day_data.mask.values[sumMask < 10,:] = np.nan
     mask_new = day_data.mask.values
     mask_new[sumMask < 10,:] = np.nan
     mask_new[:, day_data.Height.values>=200.] = day_data.mask.values[:, day_data.Height.values>=200.]
-
+    
     # assign the new mask as a dataset variable
     day_data = day_data.assign({"mask2": (('time','Height'), mask_new)})
-
+    
     # filter all data points where the mask is nan (keeping all non nans)
     day_data = day_data.where(~np.isnan(day_data.mask2))
 
     # selecting ship data corresponding to the selected day
     ship_data_day = shipData.sel(time=slice(pd.to_datetime(day_data.time.values[0]), pd.to_datetime(day_data.time.values[-1])))
-
+    
     # interpolating ship data on radar time stamps
     ship_day_interp = ship_data_day.interp(time=day_data.time.values, method='nearest')
-
+    
 
     # reading lat/lon for the trajectory
     lat_day = ship_day_interp['lat'].values
     lon_day = ship_day_interp['lon'].values
-
-
+    
+    
     # saving the data in CF compliant conventions
     MRRdata = xr.Dataset(
         data_vars={
@@ -250,15 +248,15 @@ for i_folder, fold in enumerate(folders):
             'drop_size_distribution':(('time','height'), day_data['N(D)'].values, {'long_name': 'rain drop size distribution', 'units':'log10(m -3 mm -1)'}),
             'mean_mass_weigthed_raindrop_diameter':(('time','height'), day_data['Dm'].values,{'long_name': 'mean mass weighted raindrop diameter', 'units':'mm'}),
             'spectral_width':(('time','height'), day_data['spectral width'].values, {'long_name': 'spectral width', 'units':'m s-1'}),
-        },
+        },  
         coords={
             "time": (('time',), day_data['time'].values, {"axis": "T","standard_name": "time"}), # leave units intentionally blank, to be defined in the encoding
             "height": (('height',), day_data.Height.values, {"axis": "Z","positive": "up","units": "m", "long_name":'radar range height'}),
             "lat": (('time',), lat_day, {"axis": "Y", "standard_name": "latitude", "units": "degree_north"}),
             "lon": (('time',), lon_day, { "axis": "X", "standard_name": "longitude","units": "degree_east"}),
-        },
+        },  
         attrs={'CREATED_BY'     : 'Claudia Acquistapace and Albert Garcia Benadi',
-                         'ORCID-AUTHORS'   : "Claudia Acquistapace: 0000-0002-1144-4753, Albert Garcia Benadi : 0000-0002-5560-4392",
+                         'ORCID-AUTHORS'   : "Claudia Acquistapace: 0000-0002-1144-4753, Albert Garcia Benadi : 0000-0002-5560-4392", 
                         'CREATED_ON'       : str(datetime.now()),
                         'FILL_VALUE'       : 'NaN',
                         'PI_NAME'          : 'Claudia Acquistapace',
@@ -282,13 +280,13 @@ for i_folder, fold in enumerate(folders):
                         'INSTRUMENT_MODEL' : 'MRR PRO (24 Ghz radar)',
                         'COMMENT'          : 'The MRR pro belongs to Jun. Prof. Heike Kalesse, University of Leipzig (DE)' }
     )
-
-
-
+    
+    
+    
     # assign istrument id
     instrument_id = xr.DataArray("msm_mrr_pro",dims=(),attrs={"cf_role": "trajectory_id"},)
     MRRdata = MRRdata.assign({"instrument": instrument_id,})
-
+    
     # assign additional attributes following CF convention
     MRRdata = MRRdata.assign_attrs({
             "Conventions": "CF-1.8",
@@ -297,12 +295,12 @@ for i_folder, fold in enumerate(folders):
             "history": "".join([
                 "source: " + MRRdata.attrs["DATA_SOURCE"] + "\n",
                 "processing: " + MRRdata.attrs["DATA_PROCESSING"] + "\n",
-                "postprocessing with de-aliasing developed by Albert Garcia Benadi " + '\n',
+                "postprocessing with de-aliasing developed by Albert Garcia Benadi " + '\n', 
                 "adapted to enhance CF compatibility\n",
             ]),  # the idea of this attribute is that each applied transformation is appended to create something like a log
             "featureType": "trajectoryProfile",
         })
-
+    
     # storing ncdf data
     MRRdata.to_netcdf(path_out+dateReverse+'_MRR_PRO_msm_eurec4a.nc', encoding={"Z":{"zlib":True, "complevel":9},\
                                                                                              "Ze": {"dtype": "f4", "zlib": True, "complevel":9}, \

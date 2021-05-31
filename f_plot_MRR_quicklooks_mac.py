@@ -4,7 +4,7 @@
 Created on Wed Jul 22 10:42:54 2020
 @ date; 28 april 2021
 @author: cacquist
-@goal: produce daily and hourly quicklooks of MRR data
+@goal: produce daily and hourly quicklooks of MRR data 
 
 """
 
@@ -93,16 +93,16 @@ def f_defineDoubleColorPalette(colorsLower, colorsUpper, minVal, maxVal, step, t
 
 # reading file list and its path
 # establishing paths for data input and output
-pathNcData      = '/work/cacquist/TRADE_PREC_CYCLE/SHIP_MOTIONS_CORRECTIONS/mrr/final_version/'
-pathFig         = '/work/cacquist/TRADE_PREC_CYCLE/SHIP_MOTIONS_CORRECTIONS/mrr/plots/'
-pathFigHour     = '/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/plots/'
+pathNcData      = '/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/second_step/'
+pathFig         = '/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/plots/'
+pathFigHour     = '/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/plots/hourly_plots/'
 DataList        = np.sort(glob.glob(pathNcData+'*eurec4a.nc'))
 
 print('files found: ', DataList)
 
 
 for indDay,file in enumerate(DataList):
-
+    
     date_hour       = file[len(pathNcData):len(pathNcData)+8]
 
     yy              = date_hour[0:4]
@@ -110,7 +110,7 @@ for indDay,file in enumerate(DataList):
     dd              = date_hour[6:8]
 
     print(yy,mm,dd)
-
+    
     # setting dates strings
     date            = dd+mm+yy      #'04022020'
     dateRadar       = yy[0:2]+mm+dd #'200204'
@@ -122,7 +122,7 @@ for indDay,file in enumerate(DataList):
 
     # read MRR data
     radarData          = xr.open_dataset(radarFileName)
-
+    
 
     # set here the variable you want to plot
     varStringArr = ['Zea', 'RR', 'LWC', 'W', ]
@@ -231,35 +231,33 @@ for indDay,file in enumerate(DataList):
         fig.tight_layout()
         fig.savefig('{path}{date}_{varname}_quicklook_MRR.png'.format(**dict_plot), bbox_inches='tight')
         #plt.savefig(pathFig+yy+mm+dd+'_'+radar_name+'_'+varString+'_quicklooks.png', format='png', bbox_inches='tight')
-
-
+        
+    
 
     # producing now hourly plots
     hourArr     = pd.date_range(pd.to_datetime(radarData.time.values[0]),pd.to_datetime(radarData.time.values[-1]),freq='h')
 
     # loop on the hours of the day
     for indHour in range(len(hourArr)-1):
-
+        
         # establishing the string associated to the hour
         hour = str(hourArr[indHour].hour)
         if len(hour) == 1:
             hour = '0'+hour
-
+        
         # slicing the dataset for the corresponding time interval
         if indHour != 23:
             slicedData = radarData.sel(time=slice(hourArr[indHour], hourArr[indHour+1]))
         else:
             slicedData = radarData.sel(time=slice(hourArr[indHour], pd.to_datetime(datetime(yyPlot,mmPlot,ddPlot,23,59,59))))
-
-        # creating output path for hourly file if not already existing
-        Path(pathFigHour+'/'+yy+'/'+mm+'/'+dd+'/').mkdir(parents=True, exist_ok=True)
-
+        
+    
         # set here the variable you want to plot
-        varStringArr = ['Zea', 'RR', 'LWC', 'W' ]
-
-
+        varStringArr = ['Zea', 'RR', 'LWC', 'W', ]
+    
+    
         for ivar,varSel in enumerate(varStringArr):
-
+    
             print('producing quicklook of '+varStringArr[ivar])
             varString = varStringArr[ivar]
             # settings for reflectivity
@@ -273,7 +271,7 @@ for indDay,file in enumerate(DataList):
                 cbarstr = 'Ze [dBz]'
                 strTitle = 'MRR - Equivalent reflectivity attenuated: '+dd+'.'+mm+'.'+yy
                 dict_plot = {'path':pathFigHour, 'date':date, 'hour':hour, 'varname':varSel}
-
+    
                 # settings for mean Doppler velocity
             elif varString == 'W':
                 mincm = -10.
@@ -287,7 +285,7 @@ for indDay,file in enumerate(DataList):
                 cbarstr = 'Fall speed [$ms^{-1}$]'
                 strTitle = 'MRR - Fall speed : '+dd+'.'+mm+'.'+yy
                 dict_plot = {'path':pathFigHour, 'date':date,  'hour':hour, 'varname':varSel}
-
+    
                 # settings for Spectral width
             elif varString == 'RR':
                 mincm = 0.
@@ -300,7 +298,7 @@ for indDay,file in enumerate(DataList):
                 cbarstr = 'Rainfall rate [$mmh^{-1}$]'
                 strTitle = 'MRR - Rainfall rate : '+dd+'.'+mm+'.'+yy
                 dict_plot = {'path':pathFigHour, 'date':date,  'hour':hour, 'varname':varSel}
-
+    
                 # settings for skewness
             elif varString == 'LWC':
                 mincm = 0.
@@ -313,7 +311,7 @@ for indDay,file in enumerate(DataList):
                 cbarstr = '$LWC$ [$gm^{-3}$]'
                 strTitle = 'MRR - Liquid water content : '+dd+'.'+mm+'.'+yy
                 dict_plot = {'path':pathFigHour, 'date':date,   'hour':hour, 'varname':varSel}
-
+    
             timeStartDay = slicedData.time.values[0]#datetime(2020,2,13,1,32,0)#datetimeM[0]#
             timeEndDay   = slicedData.time.values[-1]#datetime(2020,2,13,1,35,0)#datetimeM[-1]#
             hmin         = 0.
@@ -343,7 +341,7 @@ for indDay,file in enumerate(DataList):
             ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
             ax.xaxis.set_minor_formatter(mdates.DateFormatter("%H:%M"))
             ax.xaxis_date()
-
+    
             cax = ax.pcolormesh(pd.to_datetime(slicedData.time.values), slicedData.height.values, var.transpose(), vmin=mincm, vmax=maxcm, cmap=cmap)
             ax.set_ylim(hmin,hmax)                                               # limits of the y-axesn  cmap=plt.cm.get_cmap("viridis", 256)
             ax.set_xlim(timeStartDay, timeEndDay)                                 # limits of the x-axes
@@ -355,7 +353,7 @@ for indDay,file in enumerate(DataList):
             cbar.ax.tick_params(labelsize=labelsizeaxes)
             # Turn on the frame for the twin axis, but then hide all
             # but the bottom spine
-
+    
             fig.tight_layout()
             fig.savefig('{path}{date}_{hour}_{varname}_quicklook_MRR.png'.format(**dict_plot), bbox_inches='tight')
 #%%

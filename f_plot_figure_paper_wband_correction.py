@@ -1,33 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Mar  26 2021
-@author: cacquist
-@goal: produce plot for the paper showing the application of the ship motion corrections
-"""
 
-# importing necessary libraries
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import numpy as np
-import netCDF4 as nc4
-from netCDF4 import Dataset
-import netcdftime
-import glob
-import pandas as pd
-from datetime import datetime
-from datetime import timedelta
-#import atmos
-import xarray as xr
-from functions_essd import f_calculateMomentsCol
-from functions_essd import f_readAndMergeRadarDataDay_DopplerCorrection
-from functions_essd import f_readAndMergeRadarDataDay
-from functions_essd import generate_preprocess
-from scipy.interpolate import CubicSpline
-import custom_color_palette as ccp
-from matplotlib import rcParams
-import matplotlib
 
 
 #!/usr/bin/env python3
@@ -140,39 +113,7 @@ def f_fftAnalysisForCheck(w_radar_orig, timeRadar, wShip, timeShip, W_corr, W_co
     pow_wShip, freq_Ship                = f_calcFftSpectra(W_ship, pd.to_datetime(timeRadar))
     pow_radarOrig, freq_radarOrig       = f_calcFftSpectra(w_radar_orig, pd.to_datetime(timeRadar))
 
-    fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(12,10))
-    labelsizeaxes   = 12
-    fontSizeTitle = 12
-    fontSizeX = 12
-    fontSizeY = 12
-    cbarAspect = 10
-    fontSizeCbar = 12
-    # positions of the ticks for the period that appears as second axis
-    new_tick_locations = np.array([0.2, \
-                           0.1, \
-                           0.06666667, \
-                           0.05, \
-                           0.04, \
-                           0.02, \
-                           0.01666667    ])
-    def tick_function(X):
-        ''' function returning periods V when provided with frequencies X'''
-        V = 1/(X)
-        return ["%.f" % z for z in V]
-    rcParams['font.sans-serif']        = ['Tahoma']
-    matplotlib.rcParams['savefig.dpi'] = 100
-    matplotlib.rc('xtick', labelsize=labelsizeaxes)  # sets dimension of ticks in the plots
-    matplotlib.rc('ytick', labelsize=labelsizeaxes)  # sets dimension of ticks in the plots
-    plt.gcf().subplots_adjust(bottom=0.15)
-    fig.tight_layout()
-    ax = plt.subplot(3,1,1)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.get_xaxis().tick_bottom()
-    ax.get_yaxis().tick_left()
-    ax.loglog(freq_Ship, pow_wShip, label='ship', color='black', alpha=0.5)
-    ax.loglog(freq_radarOrig, pow_radarOrig, label='radar', color='orange')
-    ax.legend(frameon=False)
+    
     ax2 = ax.twiny()
     ax2.set_xlabel('periods [s]')
     ax2.set_xscale('log')
@@ -1399,7 +1340,8 @@ for i_chirp in range(0, Nchirps):
                                                             chirp)
     # adapting index for the chirp matrix to the entire matrix by adding i_h_min-1
     indHeightBest = indHeightBest+i_h_min-1
-
+    
+    print('range of the time serie: ', rangeRadar[indHeightBest])
     # reading correction time serie corresponding to the selected height in the selected time interval
     i_time_ship_best  = (pd.to_datetime(timeShip) >= timeRadarSel[0]) * (pd.to_datetime(timeShip) <= timeRadarSel[-1])
     w_ship_best       = w_ship[i_time_ship_best, indHeightBest]
@@ -1498,7 +1440,7 @@ for i_chirp in range(0, Nchirps):
     ax.plot(timePlot, W_shipRadar, color='blue', label='w_ship shifted of deltaT found')
     ax.scatter(timeSerieRadar, W_ship_exact, color='green', label='w_ship shifted interpolated on radar exact time')
     ax.set_ylim(-4.,2.)
-    ax.legend(frameon=True)
+    ax.legend(frameon=True, fontsize=16)
     ax.set_xlim(TimeBeginPlot,TimeEndPlot)                                 # limits of the x-axes
     ax.set_title(date+' '+hour+':'+'0'+str(int(hour)+1)+' $\Delta$T = '+str(round(timeShiftArray[i_chirp],2))+' s', fontsize=fontSizeTitle, loc='left')
     ax.set_xlabel("time [hh:mm:ss]", fontsize=fontSizeX)
@@ -1604,15 +1546,15 @@ def f_defineSingleColorPalette(colors, minVal, maxVal, step):
         norm
         bounds
     """
-    
+
     Intervals = ccp.range(minVal,maxVal,step)
-    
+
     # defines a sublist with characteristics of colors that will be used to create a custom palette
     palette = [colors, Intervals]
-    
+
     # we pass the parm_color inside a list to the creates_palette module
     cmap, ticks, norm, bounds = ccp.creates_palette([palette])
-    
+
     return(cmap, ticks, norm, bounds)
 def f_defineDoubleColorPalette(colorsLower, colorsUpper, minVal, maxVal, step, thrs):
     """
@@ -1634,10 +1576,10 @@ def f_defineDoubleColorPalette(colorsLower, colorsUpper, minVal, maxVal, step, t
     """
     lower_palette = [colorsLower, ccp.range(minVal, thrs, step)] # grigio: 8c8fab
     upper_palette = [colorsUpper, ccp.range(thrs, maxVal, step)] #sk # last old color 987d7b
-        
+
     # we pass the parm_color inside a list to the creates_palette module
     cmap, ticks, norm, bounds = ccp.creates_palette([lower_palette, upper_palette])
-    
+
     return(cmap, ticks, norm, bounds)
 
 import numpy.ma as ma
@@ -1665,7 +1607,7 @@ grid            = True
 fig, axs = plt.subplots(3, 1, figsize=(14,14), sharey=True, constrained_layout=True)
 
 # build colorbar
-mesh = axs[0].pcolormesh(datetimeRadar, rangeRadar,  ma.masked_invalid(mdv).T, vmin=mincm, vmax=maxcm, cmap='seismic', rasterized=True)
+mesh = axs[0].pcolormesh(datetimeRadar, rangeRadar,  ma.masked_invalid(mdv).T, vmin=mincm, vmax=maxcm, cmap=cmap, rasterized=True)
 #axs[0].set_title('Original', loc='left')
 axs[0].spines["top"].set_visible(False)
 axs[0].spines["right"].set_visible(False)
@@ -1673,7 +1615,7 @@ axs[0].get_xaxis().tick_bottom()
 axs[0].get_yaxis().tick_left()
 axs[0].set_xlim(datetimeRadar[0], datetimeRadar[-1])
 
-mesh = axs[1].pcolormesh(datetimeRadar, rangeRadar, ma.masked_invalid(mdv_corrected).T, vmin=mincm, vmax=maxcm, cmap='seismic', rasterized=True)
+mesh = axs[1].pcolormesh(datetimeRadar, rangeRadar, ma.masked_invalid(mdv_corrected).T, vmin=mincm, vmax=maxcm, cmap=cmap, rasterized=True)
 #[a.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M')) for a in axs.flatten()]
 axs[1].spines["top"].set_visible(False)
 axs[1].spines["right"].set_visible(False)
@@ -1705,9 +1647,10 @@ axs[2].get_xaxis().tick_bottom()
 axs[2].get_yaxis().tick_left()
 axs[2].set_xlim(timeStart, timeEnd)
 
-fig.colorbar(mesh, ax=axs[:], label='Mean Doppler velocity [$ms^{-1}$]', location='right', aspect=60, use_gridspec=grid)
+cbar = fig.colorbar(mesh, ax=axs[:], location='right', aspect=60, use_gridspec=grid)
+cbar.set_label(label='Mean Doppler velocity [$ms^{-1}$]', size=20)
 for ax, l in zip(axs.flatten(), ['(a) Original', '(b) Corrected', '(c) Corrected and smoothed']):
-    ax.text(-0.05, 1.05, l,  fontweight='black', transform=ax.transAxes)
+    ax.text(-0.05, 1.05, l,  fontweight='black', fontsize=20, transform=ax.transAxes)
 fig.savefig(PathFigHour+date+'_'+hour+'_figure_paper.png')
 fig.savefig(PathFigHour+date+'_'+hour+'_figure_paper.pdf')
 

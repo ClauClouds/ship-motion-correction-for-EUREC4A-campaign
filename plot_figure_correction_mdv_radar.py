@@ -29,8 +29,6 @@ from functions_essd import f_readAndMergeRadarDataDay
 from functions_essd import generate_preprocess
 from scipy.interpolate import CubicSpline
 import custom_color_palette as ccp
-from matplotlib import rcParams
-import matplotlib
 
 
 def f_defineSingleColorPalette(colors, minVal, maxVal, step):

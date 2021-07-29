@@ -141,36 +141,37 @@ def add_one_contour(ax, data, Tminmax, color, levels=1):
   return ax
 
 
-file_list = np.sort(glob.glob("/Volumes/Extreme SSD/ship_motion_correction_merian/mrr/final_version/*.nc"))
+#%%
 
-
+fileListProcess = np.sort(glob.glob('/Volumes/Extreme SSD/ship_motion_correction_merian/corrected_data/mrr_final/formatted/*.nc'))
 # combining all data in one dataset
-day_data = xr.open_mfdataset(file_list,
+day_data = xr.open_mfdataset(fileListProcess,
                                concat_dim = 'time',
                                data_vars = 'minimal',
                               )
 
+#%%
 
 # creating a xvar and yvar
 yvar_matrix = (np.ones((len(day_data.time.values),1))*np.array([day_data.height.values]))
 xvar_matrix = day_data.Zea.values
-varStringArr = ['RR', "LWC", "Zea", "W"]
+varStringArr = [ "Zea"]#, "W",'RR', "LWC"]
 for ivar,varSel in enumerate(varStringArr):
 
     print('producing 2d histogram of '+varStringArr[ivar])
     varString = varStringArr[ivar]
     # settings for reflectivity
     if varString == 'Zea':
-        mincm = -12.
-        maxcm = 50.
+        mincm = -30.
+        maxcm = 60.
         xvar_matrix = day_data.Zea.values
-        cbarstr = 'ZE attenuated [dBz]'
+        cbarstr = 'ZE attenuated [dBZ]'
         strTitle = 'MRR - Equivalent reflectivity attenuated'
         bins = [128,100]
         # settings for mean Doppler velocity
     elif varString == 'W':
         mincm = -15.
-        maxcm = 2.
+        maxcm = 0.
         xvar_matrix = -day_data.fall_speed.values
         cbarstr = 'Fall speed [$ms^{-1}$]'
         strTitle = 'MRR - Fall speed '
@@ -203,7 +204,7 @@ for ivar,varSel in enumerate(varStringArr):
     xvar = xvar_matrix.flatten()
     
     # plot 2d histogram figure 
-    i_good = (~np.isnan(xvar) * ~np.isnan(yvar))
+    i_good = (~np.isnan(xvar) * ~np.isnan(yvar) * (xvar < 100.))
    
     
     hst, xedge, yedge = np.histogram2d(xvar[i_good], yvar[i_good], bins=bins)
@@ -220,16 +221,16 @@ for ivar,varSel in enumerate(varStringArr):
     ycenter = (yedge[:-1] + yedge[1:])*0.5
     
     print(xcenter)
-    hmin         = 50.
-    hmax         = 1200.
-    labelsizeaxes = 18
-    fontSizeTitle = 18
-    fontSizeX     = 18
-    fontSizeY     = 18
-    cbarAspect    = 10
-    fontSizeCbar  = 16
+    hmin         = 0.05#50.
+    hmax         = 1.3# 1300.
+    labelsizeaxes = 30
+    fontSizeTitle = 30
+    fontSizeX     = 30
+    fontSizeY     = 30
+    cbarAspect    = 50
+    fontSizeCbar  = 30
     
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12,8))
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12,9))
     rcParams['font.sans-serif'] = ['Tahoma']
     matplotlib.rcParams['savefig.dpi'] = 100
     plt.gcf().subplots_adjust(bottom=0.15)
@@ -237,19 +238,19 @@ for ivar,varSel in enumerate(varStringArr):
     ax = plt.subplot(1,1,1)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.get_xaxis().tick_bottom()
-    ax.get_yaxis().tick_left()
+    ax.spines["bottom"].set_linewidth(2)
+    ax.spines["left"].set_linewidth(2)
     matplotlib.rc('xtick', labelsize=labelsizeaxes)  # sets dimension of ticks in the plots
     matplotlib.rc('ytick', labelsize=labelsizeaxes)  # sets dimension of ticks in the plots
-    cax = ax.pcolormesh(xcenter, ycenter, hst, cmap='viridis')
+    cax = ax.pcolormesh(xcenter, ycenter*0.001, hst, cmap='viridis')
     #ax.set_xscale('log')
     ax.set_ylim(hmin,hmax)                                               # limits of the y-axesn  cmap=plt.cm.get_cmap("viridis", 256)
     ax.set_xlim(mincm, maxcm)                                 # limits of the x-axes
-    ax.set_title(strTitle, fontsize=fontSizeTitle, loc='left')
+    #ax.set_title(strTitle, fontsize=fontSizeTitle, loc='left')
     ax.set_xlabel(cbarstr, fontsize=fontSizeX)
-    ax.set_ylabel("Height [m]", fontsize=fontSizeY)
-    cbar = fig.colorbar(cax, orientation='vertical', shrink=0.75)
-    cbar.set_label(label='Occurrences', size=fontSizeCbar)
+    ax.set_ylabel("Height [km]", fontsize=fontSizeY)
+    cbar = fig.colorbar(cax, orientation='vertical')
+    cbar.set_label(label='Count', size=fontSizeCbar)
     cbar.ax.tick_params(labelsize=labelsizeaxes)
     # Turn on the frame for the twin axis, but then hide all
     # but the bottom spine

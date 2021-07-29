@@ -1193,7 +1193,7 @@ Eurec4aDays     = pd.date_range(datetime(2020,1,19),datetime(2020,2,19),freq='d'
 NdaysEurec4a    = len(Eurec4aDays)
 #%%
 for indDay in range(NdaysEurec4a):
-    
+    indDay = 16
     dayEu           = Eurec4aDays[indDay]
     yy              = str(dayEu)[0:4]
     mm              = str(dayEu)[5:7]
@@ -1211,10 +1211,10 @@ for indDay in range(NdaysEurec4a):
     radarFileList   = np.sort(glob.glob(pathRadar+'msm94_msm_'+dateRadar+'*ZEN_v2.nc'))
     pathOutData     = pathFolderTree+'/corrected_data/'+yy+'/'+mm+'/'+dd+'/'
     
-
+    
     # loop on hours for the selected day
     for indHour in range(len(radarFileList)):
-
+        indHour = 2
         # reading radar file name
         radarFileName = radarFileList[indHour]
         # read radar height array for interpolation of model data from one single radar file
@@ -1223,6 +1223,7 @@ for indDay in range(NdaysEurec4a):
 
         # reading hour string and int quantity
         hour, hourInt =  f_convertHourString2Int(radarFileName)
+        
         
         # check if file has already been processed or not
         if os.path.isfile(pathOutData+date+'_'+hour+'msm94_msm_ZEN_corrected.nc'):
@@ -1426,7 +1427,7 @@ for indDay in range(NdaysEurec4a):
             # save ship motion correction terms in a separate file
             w_ship_shifted.to_netcdf(pathOutData+date+'_'+hour+'_w_ship.nc')
             
-            
+            strasukissims
             print('* read radar data for the selected hour')
         
             if os.path.exists(radarFileList[indHour]):

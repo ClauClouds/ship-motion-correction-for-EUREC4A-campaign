@@ -35,12 +35,18 @@ def f_string_from_time_stamp(time_sel):
 
 # set day and time at which to do the slice
 yy = '2020'
-mm = '01'
-dd = '28'
-time_sel = datetime(2020,1,28,10,0,0)
+mm = '02'
+dd = '10'
+time_sel = datetime(2020,2,10,13,5,0)
+# path on local mac
+#path = '/Volumes/Extreme SSD/ship_motion_correction_merian/corrected_data/hourly_files_Wband/2020/02/10/'
+path = '/Volumes/Extreme SSD/ship_motion_correction_merian/corrected_data/wband_daily_with_DOI/latest/with_DOI/2020/02/10/'
+filename = path+'10022020_13msm94_msm_ZEN_corrected.nc'
 
-filename = '/work/cacquist/w_band_eurec4a_LWP_corr/'+yy+'/'+mm+'/'+dd+'/28012020_10msm94_msm_ZEN_corrected.nc'
-path_out = '/work/cacquist/w_band_eurec4a_LWP_corr/plots/'
+# path on ostro machine
+#filename = '/work/cacquist/w_band_eurec4a_LWP_corr/'+yy+'/'+mm+'/'+dd+'/10022020_13msm94_msm_ZEN_corrected.nc'
+#path_out = '/work/cacquist/w_band_eurec4a_LWP_corr/plots/'
+path_out = '/Volumes/Extreme SSD/ship_motion_correction_merian/plots/spectrograms/'
 radar_data = xr.open_dataset(filename)
 radar_slice = radar_data.sel(time=time_sel, method='nearest')
 time_string = f_string_from_time_stamp(time_sel)
@@ -49,7 +55,7 @@ v = radar_slice.Doppler_velocity.values
 range_offsets = radar_slice.range_offsets.values
 height = radar_slice.range.values
 spec_db= 10*np.log10(spec)
-
+print(radar_slice.time.values)
 
 v0 = v[range_offsets[0], :]
 v1 = v[range_offsets[1], :]
@@ -95,10 +101,8 @@ cbar.set_label(label='Power [dB]',  size=20)
 fig.tight_layout()
 fig.savefig(path_out+time_string+'_height_spectrogram.png')
 
-print(np.shape(spec_0))
-print(range_offsets[1]-1)
 
-
+#%%
 # plot of single spectras
 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,10))
 rcParams['font.sans-serif'] = ['Tahoma']

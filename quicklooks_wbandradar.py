@@ -7,23 +7,16 @@ Created on Thu Feb  4 20:10:13 2021
 """
 
 # importing necessary libraries
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
-import netCDF4 as nc4
-from netCDF4 import Dataset
-import glob
+
 import pandas as pd
 from datetime import datetime
 from datetime import timedelta
 #import atmos
 import xarray as xr
-from functions_essd import f_calculateMomentsCol
-from functions_essd import f_readAndMergeRadarDataDay_DopplerCorrection
-from functions_essd import f_readAndMergeRadarDataDay
-from functions_essd import generate_preprocess
-from scipy.interpolate import CubicSpline
+
 import custom_color_palette as ccp
 from matplotlib import rcParams
 import matplotlib
@@ -94,9 +87,8 @@ NdaysEurec4a = len(Eurec4aDays)
 radar_name = 'msm'
 
 #%%
-for indDay in range(28, NdaysEurec4a):
+for indDay in range(27, NdaysEurec4a):
     # select a date
-    indDay = 9
     dayEu           = Eurec4aDays[indDay]
 
     # extracting strings for yy, dd, mm
@@ -109,36 +101,73 @@ for indDay in range(28, NdaysEurec4a):
     dateRadar       = yy[0:2]+mm+dd #'200204'
     dateReverse     = yy+mm+dd      #'20200204'
 
-    pathRadar          = pathFolderTree+'/corrected_data/'+yy+'/'+mm+'/'+dd+'/'
-    radarFileList      = np.sort(glob.glob(pathRadar+date+'_*msm94_msm_ZEN_corrected.nc'))
-    Nfiles             = len(radarFileList)
-
-    print('reading mean Doppler velocity from radar files. Nfiles :', len(radarFileList))#
+    filename          = pathFolderTree+'/corrected_data/daily_files_intake/daily_files/'+yy+mm+dd+'_wband_radar_msm_eurec4a_intake.nc'
 
 
     print('processing day : '+yy+'/'+mm+'/'+dd)
     print("*************************************************")
-    MeanDopVelDataset = xr.open_mfdataset(radarFileList,
-                                   concat_dim='time',
-                                   data_vars='minimal',
-                                   preprocess=generate_preprocess(), # drop_variables is called first
-                                  )
-
-    Vd                 = MeanDopVelDataset['vm_corrected_smoothed'].values
+    w_band_cs  = xr.open_dataset(filename)
+    
+    # removing gaps in time from w band radar data
+    datetimeRadar = pd.to_datetime(w_band_cs['time'].values)
+    time_diff = np.ediff1d(datetimeRadar)
+    #converting time differences to seconds
+    diff_list = [pd.Timedelta(t).total_seconds() for t in time_diff]
+    # find where diff_list > 4 seconds:
+    diff_arr = np.asarray(diff_list)
+    i_gaps = np.where(diff_arr > 4.)[0][:]
+    # defining new list of time stamps where we add the new missing times
+    new_time_arr = datetimeRadar.tolist()
+    len_added_times = []
+    # finding how many time stamps have to be introduced.
+    for i, i_gaps_val in enumerate(i_gaps):
+        #print(i, i_gaps_val)
+        time_stop = datetimeRadar[i_gaps_val]
+        time_restart = datetimeRadar[i_gaps_val+1]
+        # calculate number of time stamps to add
+        deltaT = diff_arr[i_gaps_val]
+        n_times_to_add = deltaT//3
+        # calculate time stamps to add in the gaps
+        time_to_add = [time_stop+i_n*(timedelta(seconds=3)) for i_n in np.arange(1,n_times_to_add+1)]
+        # storing amount of inserted values
+        len_added_times.append(len(time_to_add))
+        #print(‘time stamps to add: ’, time_to_add)
+        # loop on time to add elements for inserting them in the list one by one
+        for ind in range(len(time_to_add)):
+            # read value to insert
+            val_to_insert = time_to_add[ind]
+            # find index where to insert
+            if i == 0:
+                ind_start = i_gaps_val+1
+            else:
+                ind_start = new_time_arr.index(time_stop)+1
+            #print(i_gaps_val, ind_start)
+            new_time_arr.insert(ind_start+ind, val_to_insert)
+    new_time_arr = pd.to_datetime(np.asarray(new_time_arr))
+    print('gaps found', len(i_gaps))
+    print('dim new time array ', len(new_time_arr))
+    print('dim old time array ', len(datetimeRadar))
+    print('******************')
+    # resampling radar data on new time array
+    MeanDopVelDataset = w_band_cs.reindex({'time':new_time_arr}, method=None)
+    print('resampling on new axis for time, done.')
+    
+    # reading variables to be plotted
+    Vd                 = MeanDopVelDataset['mean_doppler_velocity'].values
     datetimeRadar      = pd.to_datetime(MeanDopVelDataset['time'].values)
-    rangeRadar         = MeanDopVelDataset['range'].values
+    rangeRadar         = MeanDopVelDataset['height'].values
     Vd[Vd == -999.]    = np.nan
-    Ze                 = MeanDopVelDataset['ze'].values
+    Ze                 = MeanDopVelDataset['radar_reflectivity'].values
     Ze[Ze == -999.]    = np.nan
-    ZeLog              = 10.*np.log10(Ze)
-    Sw                 = MeanDopVelDataset['sw'].values
+    ZeLog              = Ze #10.*np.log10(Ze)
+    Sw                 = MeanDopVelDataset['spectral_width'].values
     Sw[Sw == -999.]    = np.nan
-    Sk                 = MeanDopVelDataset['skew'].values
+    Sk                 = MeanDopVelDataset['skewness'].values
     Sk[Sk == -999.]    = np.nan
     timeLocal          = datetimeRadar-timedelta(hours=4)
 
     # set here the variable you want to plot
-    varStringArr = ['Vd', 'Ze', 'Sw', 'Sk', ]
+    varStringArr = ['Vd', 'Ze', 'Sw', 'Sk']
 
 
     for ivar in range(len(varStringArr)):
@@ -198,7 +227,7 @@ for indDay in range(28, NdaysEurec4a):
         timeStartDay = timeLocal[0]
         timeEndDay   = timeLocal[-1]
         hmin         = 0.
-        hmax=2500.
+        hmax         = 2500.
         ystring = cbarstr
         labelsizeaxes   = 16
         fontSizeTitle = 16
@@ -236,172 +265,74 @@ for indDay in range(28, NdaysEurec4a):
         cbar = fig.colorbar(cax, orientation='vertical', aspect=cbarAspect)
         cbar.set_label(label=cbarstr, size=fontSizeCbar)
         cbar.ax.tick_params(labelsize=labelsizeaxes)
-        # Turn on the frame for the twin axis, but then hide all
+        # Turn on the frame for the twin axis, but then hide al l
         # but the bottom spine
 
         fig.tight_layout()
         plt.savefig(pathFig+yy+mm+dd+'_'+radar_name+'_'+varString+'_quicklooks.png', format='png', bbox_inches='tight')
 
 
-    # plot of time series for radar variable control: blower status, p_trans, t_trans, t_rec, t_pc,
-    blowerStatus = MeanDopVelDataset['blower_status'].values
-    p_trans      = MeanDopVelDataset['p_trans'].values
-    t_trans      = MeanDopVelDataset['t_trans'].values
-    t_rec        = MeanDopVelDataset['t_rec'].values
-    t_pc         = MeanDopVelDataset['t_pc'].values
-
-    fs = 14.
-
-    data5 = MeanDopVelDataset['t_pc']-273.15 # to C
-    data5 = np.ma.masked_invalid(data5)
-    data6 = MeanDopVelDataset['t_trans']-273.15 # to C
-    data6 = np.ma.masked_invalid(data6)
-    data7 = MeanDopVelDataset['t_rec']-273.15 # to C
-    data7 = np.ma.masked_invalid(data7)
-    data8 = MeanDopVelDataset['p_trans']
-    data8 = np.ma.masked_invalid(data8)
-    status_blower = np.empty((len(MeanDopVelDataset.blower_status)))*np.nan
-    status_heater = np.empty((len(MeanDopVelDataset.blower_status)))*np.nan
-    status_blower[MeanDopVelDataset.blower_status == 11] = 1.
-    status_heater[MeanDopVelDataset.blower_status == 11] = 1.
-    status_blower[MeanDopVelDataset.blower_status == 10] = 0.
-    status_heater[MeanDopVelDataset.blower_status == 10] = 0.
-    time_dd = yy+'-'+mm+'-'+dd
-    t_plot = timeLocal
-    data9  = status_blower
-    data10 = status_heater
-    data11 = MeanDopVelDataset['tb']
-    data11 = np.ma.masked_invalid(data11)
-    time1 = timeStartDay
-    time2 =  timeEndDay
-
-    fig, axes = plt.subplots(figsize=[12.0, 15.0], nrows=6, sharex=True,
-                             squeeze=True, gridspec_kw = {'height_ratios':[1,1,1,1,0.5,1]})
-    # ---------------------------------------------------------------------
-    axes[0].plot(t_plot, data5, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
-    axes[0].axhline(y=50., color='gray', linestyle='-', linewidth = 5, alpha=0.4)
-    axes[0].set_ylabel('T_pc [$^{o}$C]', fontsize=fs)
-    axes[0].text(0.01, 0.86, time_dd+" - Radar-PC temperature ",
-                 transform=axes[0].transAxes, ha="left", fontsize=fs+1)
-    axes[0].set_xlim(time1, time2)  # limets of the x-axes
-    axes[0].set_ylim(np.nanmin(data5)-1., 55.)  # limets of the x-axes)  # limets of the x-axes
-    axes[0].grid(True, which="both")
-    # ----------------------------------
-    axes[1].plot(t_plot, data6, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
-    axes[1].axhline(y=40., color='gray', linestyle='-', linewidth = 5, alpha=0.4)
-    axes[1].axhline(y=36., color='gray', linestyle='-', linewidth = 5, alpha=0.4)
-    axes[1].set_ylabel('T_trans [$^{o}$C]', fontsize=fs)
-    axes[1].text(0.01, 0.86, time_dd+" - Transmitter temperature ",
-                 transform=axes[1].transAxes, ha="left", fontsize=fs+1)
-    axes[1].set_xlim(time1, time2)  # limets of the x-axes
-    axes[1].set_ylim(34.5, 41.5)  # limets of the x-axes
-    axes[1].grid(True, which="both")
-    # ---------------------------------------------------------------------
-    axes[2].plot(t_plot, data7, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
-    axes[2].axhline(y=39., color='gray', linestyle='-', linewidth = 5, alpha=0.4)
-    axes[2].axhline(y=33., color='gray', linestyle='-', linewidth = 5, alpha=0.4)
-    axes[2].set_ylabel('T_rec [$^{o}$C]', fontsize=fs)
-    axes[2].text(0.01, 0.86, time_dd+" - Receiver temperature ",
-                 transform=axes[2].transAxes, ha="left", fontsize=fs+1)
-    axes[2].set_xlim(time1, time2)  # limets of the x-axes
-    axes[2].set_ylim(31.5, 40.5)  # limets of the x-axes
-    axes[2].grid(True, which="both")
-    # ---------------------------------------------------------------------
-    axes[3].plot(t_plot, data8, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
-    axes[3].set_ylabel('P_trans [W]', fontsize=fs)
-    axes[3].text(0.01, 0.86, time_dd+" - Transmitted power ",
-                 transform=axes[3].transAxes, ha="left", fontsize=fs+1)
-    axes[3].set_xlim(time1, time2)  # limets of the x-axes
-    axes[3].set_yscale('log', nonposy='clip')
-    axes[3].set_ylim(0.005, 10.)  # limets of the x-axes
-    axes[3].grid(True, which="both")
-    # ---------------------------------------------------------------------
-    axes[4].plot(t_plot, data9,  linestyle='None', marker='o', markersize=6., mec='b',label='blower')
-    axes[4].plot(t_plot, data10, linestyle='None', marker='o', markersize=2., mec='r',label='heater')
-    axes[4].set_ylabel('status', fontsize=fs)
-    axes[4].set_xlabel('UTC', fontsize=fs)
-    axes[4].text(0.01, 0.74, time_dd+" - Status blower & heater ",
-                 transform=axes[4].transAxes, ha="left", fontsize=fs+1)
-    axes[4].set_xlim(time1, time2)  # limets of the x-axes
-    axes[4].set_ylim(-0.5, 2.)  # limets of the x-axes
-    axes[4].set_yticks(np.arange(0,2,1))
-    axes[4].set_yticklabels(['off','on'])
-    axes[4].legend(loc=1, fontsize=fs-5, ncol=2, frameon=False)
-    axes[4].grid(True, which="both")
-    # ---------------------------------------------------------------------
-    axes[5].plot(t_plot, data11, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
-    axes[5].set_ylabel('Tb [K]', fontsize=fs)
-    axes[5].set_xlabel('local time [UTC -4]', fontsize=fs)
-    axes[5].text(0.01, 0.86, time_dd+" - 89 GHz brightness temperature ",
-                 transform=axes[5].transAxes, ha="left", fontsize=fs+1)
-    axes[5].set_xlim(time1, time2)  # limets of the x-axes
-    axes[5].set_ylim(np.nanmin(data11)-5, np.nanmax(data11)+np.nanmax(data11)*0.1)  # limets of the x-axes
-    axes[5].grid(True, which="both")
-    print('status quicklook produced')
-
-    # -----------------------------------------------------------------------
-    plt.savefig(pathFig+'/'+yy+mm+dd+'_'+radar_name+'_status.png')
-
-
-
     # -------------------------------------------------------------------
     # --- NEXT PLOT -----------------------------------------------------
     # -------------------------------------------------------------------
-    data10 = MeanDopVelDataset['lwp']
+    fs = 22
+    time_dd = yy+mm+dd
+    data10 = MeanDopVelDataset['liquid_water_path']
     data10 = np.ma.masked_invalid(data10)
-    data11 = MeanDopVelDataset['rr']
+    data11 = MeanDopVelDataset['rain_rate']
     data11 = np.ma.masked_invalid(data11)
-    data12 = MeanDopVelDataset['ta']-273.15 # to C
+    data12 = MeanDopVelDataset['air_temperature']-273.15 # to C
     data12 = np.ma.masked_invalid(data12)
-    data13 = MeanDopVelDataset['rh']
+    data13 = MeanDopVelDataset['relative_humidity']*100.
     data13 = np.ma.masked_invalid(data13)
-    data14 = MeanDopVelDataset['pa']
+    data14 = MeanDopVelDataset['air_pressure']
     data14 = np.ma.masked_invalid(data14)
     fig, axes = plt.subplots(figsize=[12.0, 15.0], nrows=5, sharex=True)
     # ---------------------------------------------------------------------
-    axes[0].plot(t_plot, data10, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
+    axes[0].plot(timeLocal, data10, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
     axes[0].set_ylabel('LWP [g m$^{-2}$]', fontsize=fs)
     axes[0].text(0.01, 0.86, time_dd+" - Liquid Water Path "+radar_name+',(RPG processing)',
                  transform=axes[0].transAxes, ha="left", fontsize=fs+1)
-    axes[0].set_xlim(time1, time2)  # limets of the x-axes
+    axes[0].set_xlim(timeStartDay, timeEndDay)  # limets of the x-axes
     axes[0].set_ylim(-1., np.nanmax(data10)+10.)  # limets of the x-axes)  # limets of the x-axes
     axes[0].grid(True, which="both")
     # ----------------------------------
-    axes[1].plot(t_plot, data11, linestyle='None', marker='o', markersize=3., mec='m', mfc='m')
+    axes[1].plot(timeLocal, data11, linestyle='None', marker='o', markersize=3., mec='m', mfc='m')
     axes[1].set_ylabel('RR [mm h$^{-1}$]', fontsize=fs)
     axes[1].text(0.01, 0.86, time_dd+" - Met.-station rain rate ",
                  transform=axes[1].transAxes, ha="left", fontsize=fs+1)
-    axes[1].set_xlim(time1, time2)  # limets of the x-axes
+    axes[1].set_xlim(timeStartDay, timeEndDay)  # limets of the x-axes
     axes[1].set_ylim(-0.25, np.nanmax(data11)+1.)  # limets of the x-axes
     axes[1].grid(True, which="both")
     # ---------------------------------------------------------------------
-    axes[2].plot(t_plot, data12, linestyle='None', marker='o', markersize=3., mec='r', mfc='r')
+    axes[2].plot(timeLocal, data12, linestyle='None', marker='o', markersize=3., mec='r', mfc='r')
     axes[2].set_ylabel('T [$^{o}$C]', fontsize=fs)
     axes[2].text(0.01, 0.86, time_dd+" - Met.-station air temperature ",
                  transform=axes[2].transAxes, ha="left", fontsize=fs+1)
-    axes[2].set_xlim(time1, time2)  # limets of the x-axes
+    axes[2].set_xlim(timeStartDay, timeEndDay)  # limets of the x-axes
     axes[2].set_ylim(np.nanmin(data12)-1, np.nanmax(data12)+1)  # limets of the x-axes
     axes[2].grid(True, which="both")
     # ---------------------------------------------------------------------
     axes[3].axhline(y=70., color='gray', linestyle='-', linewidth = 5, alpha=0.4)
-    axes[3].plot(t_plot, data13, linestyle='None', marker='o', markersize=3., mec='c', mfc='c')
+    axes[3].plot(timeLocal, data13, linestyle='None', marker='o', markersize=3., mec='c', mfc='c')
     axes[3].set_ylabel('rel. humidity [%]', fontsize=fs)
     axes[3].text(0.01, 0.86, time_dd+" - Met.-station relative humidity ",
                  transform=axes[3].transAxes, ha="left", fontsize=fs+1)
-    axes[3].set_xlim(time1, time2)  # limets of the x-axes
+    axes[3].set_xlim(timeStartDay, timeEndDay)  # limets of the x-axes
     axes[3].set_ylim(0.0, 100.)  # limets of the x-axes
     axes[3].grid(True, which="both")
     # ---------------------------------------------------------------------
-    axes[4].plot(t_plot, data14, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
+    axes[4].plot(timeLocal, data14, linestyle='None', marker='o', markersize=3., mec='b', mfc='b')
     axes[4].set_ylabel('pressure [HPa]', fontsize=fs)
     axes[4].set_xlabel('local time (UTC -4)', fontsize=fs)
     axes[4].text(0.01, 0.86, time_dd+" - Met.-station atmospheric pressure  ",
                  transform=axes[4].transAxes, ha="left", fontsize=fs+1)
-    axes[4].set_xlim(time1, time2)  # limets of the x-axes
+    axes[4].set_xlim(timeStartDay, timeEndDay)  # limets of the x-axes
     #axes[4].set_ylim(-0.1, np.nanmax(data14)+0.25)  # limets of the x-axes
     axes[4].grid(True, which="both")
     print('met data overview quicklook produced')
-
+    axes[4].xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+    axes[4].xaxis.set_minor_formatter(mdates.DateFormatter("%H:%M"))
     # -----------------------------------------------------------------------
     plt.savefig(pathFig+'/'+yy+mm+dd+'_'+radar_name+'_metstation.png')
     print('------------ quicklook done ------------')

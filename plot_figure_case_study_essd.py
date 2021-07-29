@@ -425,12 +425,10 @@ profile_mrr_rm = pd.Series(profile_mrr).rolling(window=N).mean().iloc[N-1:].valu
 plt.plot(timeLocal[N-1:], pd.Series(profile_mrr).rolling(window=N).mean().iloc[N-1:].values)
 
 #%%
-# plot overview panel for both instruments 
-fig, axs = plt.subplots(2, 1, figsize=(20,14), constrained_layout=True)
-from matplotlib.path import Path
-import matplotlib.patches as patches
-from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 
+
+
+#%%
 # Create rectangle x coordinates
 startTime = datetime(2020,2,12,16,20,0)
 endTime = startTime + timedelta(minutes = 15)
@@ -470,11 +468,12 @@ path2 = Path(verts2, codes)
 #rect = mpl.patches.Rectangle((start, 0), width, 2000., linewidth=4, edgecolor='yellow', facecolor='none')
 patch1 = patches.PathPatch(path1, facecolor='none', edgecolor='red', linewidth=4, linestyle=':')
 patch2 = patches.PathPatch(path2, facecolor='none', edgecolor='red', linewidth=4, linestyle=':')
+fig, axs = plt.subplots(2, 1, figsize=(20,14), constrained_layout=True)
 
 # setting dates formatter 
 [a.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M')) for a in axs[:].flatten()]
-matplotlib.rc('xtick', labelsize=22)  # sets dimension of ticks in the plots
-matplotlib.rc('ytick', labelsize=22)  # sets dimension of ticks in the plots
+matplotlib.rc('xtick', labelsize=32)  # sets dimension of ticks in the plots
+matplotlib.rc('ytick', labelsize=32)  # sets dimension of ticks in the plots
 grid            = True
 mesh = axs[0].pcolormesh(timeLocal, rangeRadar,  ZeLog.T, vmin=maxcm_ze, vmax=mincm_ze, cmap=cmap_ze, rasterized=True)
 axs[0].plot(timeLocal[N-1:], pd.Series(profile_mrr).rolling(window=N).mean().iloc[N-1:].values, color='white', linestyle='dotted', linewidth=2, label='MRR highest signal')
@@ -491,8 +490,8 @@ axs[0].xaxis.grid(True, which='minor')
 axs[0].xaxis.set_minor_locator(MultipleLocator(5))
 
 cbar = fig.colorbar(mesh, ax=axs[0], location='right', aspect=10, use_gridspec=grid)
-cbar.set_label(label='Ze [dBZ]',  size=20)
-axs[0].set_ylabel('Height [m]', fontsize=fontSizeX)
+cbar.set_label(label='Ze [dBZ]',  size=32)
+axs[0].set_ylabel('Height [m]', fontsize=32)
 
 #mrr_cs.Zea.plot(x='time', y='height', cmap=cmap_ze_mrr, vmin=-10., vmax=40.)
 mesh = axs[1].pcolormesh(timeLocal, range_mrr, mrr_interp.Zea.values.T, vmin=mincm_ze_mrr, vmax=maxcm_ze_mrr, cmap='viridis', rasterized=True)
@@ -504,15 +503,15 @@ axs[1].get_yaxis().tick_left()
 axs[1].set_xlim(time_start, time_end)
 axs[1].set_ylim(ymin_mrr, ymax_mrr)
 cbar = fig.colorbar(mesh, ax=axs[1], location='right', aspect=10, use_gridspec=grid)
-cbar.set_label(label='Ze - MRR [dBZ]',  size=20)
-axs[1].set_ylabel('Height [m]', fontsize=fontSizeX)
-axs[1].set_xlabel('Time UTC [hh:mm]', fontsize=fontSizeX)
+cbar.set_label(label='Ze - MRR [dBZ]',  size=32)
+axs[1].set_ylabel('Height [m]', fontsize=32)
+axs[1].set_xlabel('Time UTC [hh:mm]', fontsize=32)
 axs[1].add_patch(patch2)   
-axs[1].legend(frameon=False, fontsize=20)
+axs[1].legend(frameon=False, fontsize=32)
 axs[1].xaxis.grid(True, which='minor')
 axs[1].xaxis.set_minor_locator(MultipleLocator(5))
-for ax, l in zip(axs.flatten(), ['(a) Reflectivity - Wband', '(b) Reflectivity - MRR-PRO']):
-    ax.text(-0.05, 1.05, l,  fontweight='black', fontsize=20, transform=ax.transAxes)
+for ax, l in zip(axs.flatten(), ['a) Reflectivity - Wband', 'b) Reflectivity - MRR-PRO']):
+    ax.text(-0.05, 1.05, l,  fontweight='black', fontsize=32, transform=ax.transAxes)
 fig.savefig(Path_out+'_case_overview_both_instr.png')
 #fig.savefig(Path_out+'_case_overview_both_instr.pdf')
 #%%
@@ -988,3 +987,140 @@ axs[1].set_ylabel('Height [m]', fontsize=fontSizeX)
 axs[1].set_ylim(100., 2000.)
 axs[1].plot(lcl_time, lcl, color='black', linestyle='dotted', linewidth=3)
 axs[1].axvline(x=time_profile, color='black', linewidth=4, linestyle=':')
+
+
+
+
+
+
+
+
+
+
+
+
+#####
+# attempts to make a single plot with the image 
+
+####################
+
+
+
+# plot overview panel for both instruments 
+from matplotlib.path import Path
+import matplotlib.patches as patches
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+from PIL import Image
+matplotlib.rc('xtick', labelsize=22)  # sets dimension of ticks in the plots
+matplotlib.rc('ytick', labelsize=22)  # sets dimension of ticks in the plots
+grid            = True
+fontSizeX = 32
+# loading image with ship position
+Im = Image.open('/Users/claudia/Desktop/ship_position_case_study.png')
+
+# Create rectangle x coordinates
+startTime = datetime(2020,2,12,16,20,0)
+endTime = startTime + timedelta(minutes = 15)
+
+# convert to matplotlib date representation
+start = mdates.date2num(startTime)
+end = mdates.date2num(endTime)
+width = end - start
+
+verts1 = [
+   (start, 0.),  # left, bottom
+   (start, 2200.),  # left, top
+   (end, 2200.),  # right, top
+   (end, 0.),  # right, bottom
+   (0., 0.),  # ignored
+]
+verts2 = [
+   (start, 0.),  # left, bottom
+   (start, 1000.),  # left, top
+   (end, 1000.),  # right, top
+   (end, 0.),  # right, bottom
+   (0., 0.),  # ignored
+]
+
+codes = [
+    Path.MOVETO,
+    Path.LINETO,
+    Path.LINETO,
+    Path.LINETO,
+    Path.CLOSEPOLY,
+]
+
+path1 = Path(verts1, codes)
+path2 = Path(verts2, codes)
+
+# Plot rectangle
+#rect = mpl.patches.Rectangle((start, 0), width, 2000., linewidth=4, edgecolor='yellow', facecolor='none')
+patch1 = patches.PathPatch(path1, facecolor='none', edgecolor='red', linewidth=4, linestyle=':')
+patch2 = patches.PathPatch(path2, facecolor='none', edgecolor='red', linewidth=4, linestyle=':')
+
+
+# defining figure in its grid
+fig_grid = plt.figure(figsize=(24,14), constrained_layout=True)
+gs = fig_grid.add_gridspec(2,2)
+f3_ax1 = fig_grid.add_subplot(gs[0, :-1])
+mesh = f3_ax1.pcolormesh(timeLocal, rangeRadar,  ZeLog.T, vmin=maxcm_ze, vmax=mincm_ze, cmap=cmap_ze, rasterized=True)
+f3_ax1.plot(timeLocal[N-1:], pd.Series(profile_mrr).rolling(window=N).mean().iloc[N-1:].values, color='white', linestyle='dotted', linewidth=2, label='MRR highest signal')
+f3_ax1.plot(timeLocal, lcl, color='black', label='Lifting condensation level')
+#axs[0].plot(time_mrr, profile_mrr, color='white')
+f3_ax1.spines["top"].set_visible(False)
+f3_ax1.spines["right"].set_visible(False)
+f3_ax1.get_xaxis().tick_bottom()
+f3_ax1.get_yaxis().tick_left()
+f3_ax1.set_xlim(time_start, time_end)
+f3_ax1.set_ylim(ymin_w, ymax_w)
+f3_ax1.add_patch(patch1)   
+f3_ax1.xaxis.grid(True, which='minor')
+f3_ax1.xaxis.set_minor_locator(MultipleLocator(5))
+f3_ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+cbar = fig.colorbar(mesh, ax=f3_ax1, aspect=10, use_gridspec=grid)
+cbar.set_label(label='Ze [dBZ]',  size=32)
+f3_ax1.set_ylabel('Height [m]', fontsize=fontSizeX)
+f3_ax1.text(-0.05, 1.05, 'a) Reflectivity - Wband',  fontweight='black', fontsize=32, transform=f3_ax1.transAxes)
+
+
+f3_ax2 = fig_grid.add_subplot(gs[1, :-1])
+mesh = f3_ax2.pcolormesh(timeLocal, range_mrr, mrr_interp.Zea.values.T, vmin=mincm_ze_mrr, vmax=maxcm_ze_mrr, cmap='viridis', rasterized=True)
+f3_ax2.plot(lcl_time, lcl, color='black', label='Lifting condensation level (LCL)')
+f3_ax2.spines["top"].set_visible(False)
+f3_ax2.spines["right"].set_visible(False)
+f3_ax2.get_xaxis().tick_bottom()
+f3_ax2.get_yaxis().tick_left()
+f3_ax2.set_xlim(time_start, time_end)
+f3_ax2.set_ylim(ymin_mrr, ymax_mrr)
+cbar = fig.colorbar(mesh, ax=f3_ax2, aspect=10, use_gridspec=grid)
+cbar.set_label(label='Ze - MRR [dBZ]',  size=32)
+f3_ax2.set_ylabel('Height [m]', fontsize=32)
+f3_ax2.set_xlabel('Time UTC [hh:mm]', fontsize=32)
+f3_ax2.add_patch(patch2)   
+f3_ax2.legend(frameon=False, fontsize=32)
+f3_ax2.xaxis.grid(True, which='minor')
+f3_ax2.xaxis.set_minor_locator(MultipleLocator(5))
+f3_ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+f3_ax2.text(-0.15, 1.05, 'b) Reflectivity - MRR-PRO',  fontweight='black', fontsize=32, transform=f3_ax2.transAxes)
+
+
+f3_ax3 = fig_grid.add_subplot(gs[:, -1])
+f3_ax3.imshow(Im, extent=(20, 80, 20, 80))
+f3_ax3.text(-0.05, 1.05, 'c) Corrected reflectances from MODIS Terra with ship track',  fontweight='black', fontsize=20, transform=f3_ax3.transAxes)
+f3_ax3.set_axis_off()
+fig_grid.savefig(Path_out+'_case_overview_both_instr.png')
+#%%
+fig, ax = plt.subplots(figsize=(14,14))
+ax.imshow(Im)#,
+          #aspect='auto',
+          #extent=(6.5, -0.5, -0.5,5.5))
+ax.set_axis_off()
+fig.subplots_adjust(left=0.1, bottom=0.1, right=0.1, top=0.9, hspace=0.2)
+#plt.imshow(Im, extent=(20, 80, 20, 80))
+ax.text(-0.05, 1.05, 'c) Corrected reflectances from MODIS Terra with ship track',  fontweight='black', fontsize=20, transform=ax.transAxes)
+#plt.axis('off')
+fig.savefig(Path_out+'_map.png')
+
+
+
+

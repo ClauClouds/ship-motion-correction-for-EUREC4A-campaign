@@ -94,18 +94,19 @@ Path(pathFig).mkdir(parents=True, exist_ok=True)
 
 PathFigHour = pathFolderTree+'plots/paperPlots/'
 Path(PathFigHour).mkdir(parents=True, exist_ok=True)
-Path(pathOutData).mkdir(parents=True, exist_ok=True)
+#Path(pathOutData).mkdir(parents=True, exist_ok=True)
 
 
 # generating array of days for the dataset
 Eurec4aDays  = pd.date_range(datetime(2020,1,19),datetime(2020,2,19),freq='d')
 NdaysEurec4a = len(Eurec4aDays)
 radar_name = 'msm'
+
+
 #%%
 
-indDay = 1
 dayEu = '2020-01-20'
-
+#dayEu = '2020-02-10'
 
 # extracting strings for yy, dd, mm
 yy = str(dayEu)[0:4]
@@ -142,6 +143,11 @@ else:
 
 MeanDopVelDataset = xr.open_dataset(filename)
 datetimeRadar = pd.to_datetime(MeanDopVelDataset['time'].values)
+
+# reading second file
+filename2 = pathFolderTree+'/corrected_data/2020/02/10/10022020_02msm94_msm_ZEN_corrected.nc'
+MeanDopVelDataset_2 = xr.open_dataset(filename2)
+datetimeRadar_2 = pd.to_datetime(MeanDopVelDataset_2['time'].values)
 
 #%%
 time_diff = np.ediff1d(datetimeRadar)
@@ -198,7 +204,10 @@ MeanDopVelDataset_res = MeanDopVelDataset.reindex({"time":new_time_arr}, method=
 print('resampling on new axis for time, done. ')
 
 #%%
-# reading variables to plot
+# reading ST flag file
+ST_flag_file = '/Volumes/Extreme SSD/ship_motion_correction_merian/stable_table_processed_data/stabilization_platform_status_eurec4a.nc'
+ST_flag = xr.open_dataset(ST_flag_file)
+
 
 
 Vd = MeanDopVelDataset_res['vm'].values
@@ -214,9 +223,35 @@ rangeRadar = MeanDopVelDataset_res['range'].values
 Vd_corr_smooth[Vd_corr_smooth == -999.] = np.nan
 
 datetimeRadar = pd.to_datetime(MeanDopVelDataset_res['time'].values)
+
+# setting time interval for plotting
+date_start = datetime(2020,1,20,6,21,20)
+date_end = datetime(2020,1,20,6,27,0)
+#date_start = datetime(2020,2,7,16,10,0)
+#date_end = datetime(2020,2,7,16,35,0)
+#date_start = datetime(2020,2,10,2,30,0)
+#date_end = datetime(2020,2,10,2,43,0)
+
+
+time_local = datetimeRadar-timedelta(hours=4)
+date_start_local = date_start-timedelta(hours=4)
+date_end_local = date_end-timedelta(hours=4)
+
+
+
+#datetimeTable_local = pd.to_datetime(datetimeTable)-timedelta(hours=4)
+ST_time_local = pd.to_datetime(ST_flag.time.values)-timedelta(hours=4)
+
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+
 # settings for mean Doppler velocity
-mincm = -3.
-maxcm = 3.
+h_max_2 = 3000.
+h_max = 2200.
+
+mincm = -5.
+maxcm = 5.
 step = 0.1
 thrs = 0.
 colorsLower = ["#4553c2", "#2b19d9", "#d0d2f0", "#42455e", "#66abf9"]# grigio: 8c8fab
@@ -224,62 +259,112 @@ colorsUpper = ["#fd2c3b", "#59413f", "#fdc7cc", "#8f323c", "#e66c4c", "#ae8788"]
 cmap, ticks, norm, bounds =  f_defineDoubleColorPalette(colorsLower, colorsUpper, mincm, maxcm, step, thrs)
 cbarstr = 'Vd [$ms^{-1}$]'
 # plot quicklook of filtered and corrected mdv for checking
-labelsizeaxes   = 14
-fontSizeTitle   = 16
-fontSizeX       = 16
-fontSizeY       = 16
+labelsizeaxes   = 26
+fontSizeTitle   = 26
+fontSizeX       = 26
+fontSizeY       = 26
 cbarAspect      = 10
-fontSizeCbar    = 16
+fontSizeCbar    = 26
 rcParams['font.sans-serif'] = ['Tahoma']
 matplotlib.rcParams['savefig.dpi'] = 100
 plt.rcParams.update({'font.size':14})
 grid            = True
-fig, axs = plt.subplots(3, 1, figsize=(14,14), sharey=True, constrained_layout=True)
+matplotlib.rc('xtick', labelsize=24)  # sets dimension of ticks in the plots
+matplotlib.rc('ytick', labelsize=24)  # sets dimension of ticks in the plots
+fig, axs = plt.subplots(4, 2, figsize=(25,18), constrained_layout=True)#  
 
 # build colorbar
-mesh = axs[0].pcolormesh(datetimeRadar, rangeRadar,  Vd.T, vmin=mincm, vmax=maxcm, cmap=cmap, rasterized=True)
-#axs[0].set_title('Original', loc='left')
-axs[0].spines["top"].set_visible(False)
-axs[0].spines["right"].set_visible(False)
-axs[0].get_xaxis().tick_bottom()
-axs[0].get_yaxis().tick_left()
-axs[0].set_xlim(datetimeRadar[0], datetimeRadar[-1])
+mesh = axs[0,0].pcolormesh(time_local, rangeRadar, Vd.T, vmin=mincm, vmax=maxcm, cmap=cmap, rasterized=True)
 
-mesh = axs[1].pcolormesh(datetimeRadar, rangeRadar, Vd_corr.T, vmin=mincm, vmax=maxcm, cmap=cmap, rasterized=True)
-#[a.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M')) for a in axs.flatten()]
-axs[1].spines["top"].set_visible(False)
-axs[1].spines["right"].set_visible(False)
-axs[1].get_xaxis().tick_bottom()
-axs[1].get_yaxis().tick_left()
-#axs[1].set_title('Corrected', fontsize=fontSizeX, loc='left')
-axs[1].set_xlim(datetimeRadar[0], datetimeRadar[-1])
+mesh = axs[1,0].pcolormesh(time_local, rangeRadar, Vd_corr.T, vmin=mincm, vmax=maxcm, cmap=cmap, rasterized=True)
 
-axs[0].set_ylabel('Height   [m]', fontsize=fontSizeX)
-axs[1].set_ylabel('Height   [m]', fontsize=fontSizeX)
-axs[2].set_ylabel('Height   [m]', fontsize=fontSizeX)
+mesh = axs[2,0].pcolormesh(time_local, rangeRadar, Vd_corr_smooth.T, vmin=mincm, vmax=maxcm, cmap=cmap, rasterized=True)
 
-axs[0].set_ylim(100., 2500.)
-axs[1].set_ylim(100., 2500.)
+#axs[3].scatter(datetimeTable_local, flagTable)
+axs[3,0].scatter(ST_time_local, ST_flag.flag_table_working.values, color='red')
+axs[3,0].set_xlabel('Local time (UTC-4h) [hh:mm]', fontsize=fontSizeX)
 
-axs[2].set_ylim(100., 2500.)
+axs[0,0].set_ylabel('Height [m]', fontsize=fontSizeX)
+axs[0,0].set_ylim(100., h_max)
+axs[1,0].set_ylabel('Height [m]', fontsize=fontSizeX)
+axs[1,0].set_ylim(100., h_max)
+axs[2,0].set_ylabel('Height [m]', fontsize=fontSizeX)
+axs[2,0].set_ylim(100., h_max)
+#axs[3].set_ylabel('Status [1=off,0=on]', fontsize=fontSizeX)
+#axs[3].yaxis.set_major_locator(ticker.MultipleLocator(1.0))
+axs[3,0].set_yticks([0, 1, 1.5])
+axs[3,0].set_yticklabels(['table ON', 'table OFF', ''])
+#axs[3].yaxis.set_major_formatter(ticker.FixedFormatter(['table on', 'table off']))
+#axs[3].set_ylim(0, 1)
 
-axs[2].set_xlabel('time [hh:mm]', fontsize=fontSizeX)
-#axs[0].set_xlabel('time [hh:mm]', fontsize=fontSizeX)
-#axs[1].set_xlabel('time [mm:ss]', fontsize=fontSizeX)
-#axs[1].set_xlabel('time [mm:ss]', fontsize=fontSizeX)
-[a.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M')) for a in axs[:].flatten()]
+for ax, l in zip(axs[:,0].flatten(), ['(a) Original', '(b) Corrected', '(c) Corrected and smoothed', '(d) Stabilization platform status']):
+    ax.text(-0.05, 1.05, l,  fontweight='black', fontsize=26, transform=ax.transAxes)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.set_xlim(date_start_local, date_end_local)
+    ax.spines["bottom"].set_linewidth(2)
+    ax.spines["left"].set_linewidth(2)
+    ax.tick_params(which='minor', length=7, width=3)
+    ax.tick_params(which='major', length=7, width=3)
 
-mesh = axs[2].pcolormesh(datetimeRadar, rangeRadar, Vd_corr_smooth.T, vmin=mincm, vmax=maxcm, cmap=cmap, rasterized=True)
-#axs[2].set_title('Corrected and smoothed', fontsize=fontSizeX, loc='left')
-axs[2].spines["top"].set_visible(False)
-axs[2].spines["right"].set_visible(False)
-axs[2].get_xaxis().tick_bottom()
-axs[2].get_yaxis().tick_left()
-axs[2].set_xlim(timeStart, timeEnd)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
-cbar = fig.colorbar(mesh, ax=axs[:], location='right', aspect=60, use_gridspec=grid)
-cbar.set_label(label='Mean Doppler velocity [$ms^{-1}$]', size=20)
-for ax, l in zip(axs.flatten(), ['(a) Original', '(b) Corrected', '(c) Corrected and smoothed']):
-    ax.text(-0.05, 1.05, l,  fontweight='black', fontsize=20, transform=ax.transAxes)
+
+# panels on the right
+
+# reading variables to plot
+Vd_2 = MeanDopVelDataset_2['vm'].values
+Vd_2[Vd_2 == -999.] = np.nan
+Vd_corr_2 = MeanDopVelDataset_2['vm_corrected'].values
+Vd_corr_2[Vd_corr_2 == -999.] = np.nan
+Vd_corr_smooth_2 = MeanDopVelDataset_2['vm_corrected_smoothed'].values
+Vd_corr_smooth_2[Vd_corr_smooth_2 == -999.] = np.nan
+datetimeRadar_2 = pd.to_datetime(MeanDopVelDataset_2['time'].values)
+time_local_2 = datetimeRadar_2-timedelta(hours=4)
+date_start_2 = datetime(2020,2,10,2,30,0)
+date_end_2 = datetime(2020,2,10,2,36,0)
+date_start_local_2 = date_start_2-timedelta(hours=4)
+date_end_local_2 = date_end_2-timedelta(hours=4)
+rangeRadar_2 = MeanDopVelDataset_2['range'].values
+
+
+# build colorbar
+mesh = axs[0,1].pcolormesh(time_local_2, rangeRadar, Vd_2.T, vmin=mincm, vmax=maxcm, cmap=cmap, rasterized=True)
+
+mesh = axs[1,1].pcolormesh(time_local_2, rangeRadar, Vd_corr_2.T, vmin=mincm, vmax=maxcm, cmap=cmap, rasterized=True)
+
+mesh = axs[2,1].pcolormesh(time_local_2, rangeRadar, Vd_corr_smooth_2.T, vmin=mincm, vmax=maxcm, cmap=cmap, rasterized=True)
+
+#axs[3].scatter(datetimeTable_local, flagTable)
+axs[3,1].scatter(ST_time_local, ST_flag.flag_table_working.values, color='red')
+axs[3,1].set_xlabel('Local time (UTC-4h) [hh:mm]', fontsize=fontSizeX)
+
+axs[0,1].set_ylabel('Height [m]', fontsize=fontSizeX)
+axs[0,1].set_ylim(100., h_max_2)
+axs[1,1].set_ylabel('Height [m]', fontsize=fontSizeX)
+axs[1,1].set_ylim(100., h_max_2)
+axs[2,1].set_ylabel('Height [m]', fontsize=fontSizeX)
+axs[2,1].set_ylim(100., h_max_2)
+#axs[3].set_ylabel('Status [1=off,0=on]', fontsize=fontSizeX)
+#axs[3].yaxis.set_major_locator(ticker.MultipleLocator(1.0))
+axs[3,1].set_yticks([0, 1, 1.5])
+axs[3,1].set_yticklabels(['table ON', 'table OFF', ''])
+#axs[3].yaxis.set_major_formatter(ticker.FixedFormatter(['table on', 'table off']))
+#axs[3].set_ylim(0, 1)
+
+cbar = fig.colorbar(mesh, ax=axs[:,1], location='right', aspect=20, use_gridspec=grid)
+cbar.set_label(label='Mean Doppler velocity [$ms^{-1}$]', size=26)
+
+for ax, l in zip(axs[:,1].flatten(), ['(e) Original', '(f) Corrected', '(g) Corrected and smoothed', '(h) Stabilization platform status']):
+    ax.text(-0.05, 1.05, l, fontweight='black', fontsize=26, transform=ax.transAxes)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.set_xlim(date_start_local_2, date_end_local_2)
+    ax.spines["bottom"].set_linewidth(2)
+    ax.spines["left"].set_linewidth(2)
+    ax.tick_params(which='minor', length=7, width=3)
+    ax.tick_params(which='major', length=7, width=3)
+
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+    
 fig.savefig(PathFigHour+date+'_'+hh+'_figure_paper.png')
-fig.savefig(PathFigHour+date+'_'+hh+'_figure_paper.pdf')

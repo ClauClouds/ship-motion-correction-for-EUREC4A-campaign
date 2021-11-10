@@ -153,7 +153,7 @@ def f_fftAnalysisForCheck(w_radar_orig, timeRadar, wShip, timeShip, W_corr, W_co
     ax.legend(frameon=False, fontsize=16)
 
     ax2 = ax.twiny()
-    ax2.set_xlabel('periods [s]')
+    ax2.set_xlabel('period [s]')
     ax2.set_xscale('log')
     ax2.set_xlim(ax.get_xlim())
     ax2.axvline(x=17., linestyle=':', color='black')
@@ -173,7 +173,7 @@ def f_fftAnalysisForCheck(w_radar_orig, timeRadar, wShip, timeShip, W_corr, W_co
     axt.legend(frameon=False, fontsize=16)
     axt2 = ax.twiny()
 
-    axt2.set_xlabel('periods [s]')
+    axt2.set_xlabel('period [s]')
     axt2.set_xscale('log')
     axt2.set_xlim(ax.get_xlim())
     axt2.set_xticks(new_tick_locations)
@@ -300,9 +300,9 @@ def f_fftAnalysisForCheck_v2(w_radar_orig, timeRadar, wShip, timeShip, W_corr, W
 
 
     axs[0].set_xscale('log')
-    axs[0].loglog(freq_Ship, pow_wShip, label='$w_{ship}$', color='black', alpha=0.5, marker=".")
-    axs[0].loglog(freq_trasl, pow_wtrasl, label='$v_{trasl}$ (heave)', color='purple')
-    axs[0].loglog(freq_rot, pow_wrot, label='$v_{rot}$', color='cyan')
+    axs[0].loglog(freq_Ship, pow_wShip, label='${{v}_{radar}}_z$', color='black', alpha=0.5, marker=".")
+    axs[0].loglog(freq_trasl, pow_wtrasl, label='${{v}_{trans}}_z$', color='purple')
+    axs[0].loglog(freq_rot, pow_wrot, label='${{v}_{rot}}_z$', color='cyan')
     axs[0].set_xlim([0.01, 0.2])
     axs[0].loglog(freq_radarOrig, pow_radarOrig, label='$w_{signal}$', color='orange', linestyle=":")
     axs[0].legend(frameon=True, fontsize=20, loc='upper left')
@@ -312,7 +312,7 @@ def f_fftAnalysisForCheck_v2(w_radar_orig, timeRadar, wShip, timeShip, W_corr, W
 
     # set second x axis for periods
     ax2 = axs[0].twiny()
-    ax2.set_xlabel('periods [s]', fontsize=fontSizeX)
+    ax2.set_xlabel('period [s]', fontsize=fontSizeX)
     ax2.set_xscale('log')
     ax2.set_xlim(axs[0].get_xlim())
     ax2.axvline(x=17., linestyle=':', color='black')
@@ -323,7 +323,7 @@ def f_fftAnalysisForCheck_v2(w_radar_orig, timeRadar, wShip, timeShip, W_corr, W
     axs[1].set_xscale('log')
     #axs[1].set_title('Corrected', fontsize=fontSizeX, loc='left')
     axs[1].loglog(freq_radarOrig, pow_radarOrig, label='$w_{signal}$', color='black')
-    axs[1].loglog(freq_radarCorr, pow_radarCorr, label='$w$ corrected with time shift', color='pink')
+    axs[1].loglog(freq_radarCorr, pow_radarCorr, label='${w_{hyd}}$ corrected with time shift', color='pink')
     axs[1].legend(frameon=False, fontsize=20)
     axs[1].set_ylabel('FFT spectra [s$^{-1}$]', fontsize=fontSizeX)
     axs[1].axvline(x=0.155, color='black', linestyle=':')
@@ -331,10 +331,10 @@ def f_fftAnalysisForCheck_v2(w_radar_orig, timeRadar, wShip, timeShip, W_corr, W
 
 
     axs[2].set_xscale('log')
-    axs[2].loglog(freq_radarOrig, pow_radarOrig, label='$w^_{signal}$', color='black')
-    axs[2].loglog(freq_radarCorr_NS, pow_radarCorr_NS, label='$w$ corrected without time shift', color='green')
+    axs[2].loglog(freq_radarOrig, pow_radarOrig, label='$w_{signal}$', color='black')
+    axs[2].loglog(freq_radarCorr_NS, pow_radarCorr_NS, label='${w_{hyd}}$ corrected without time shift', color='green')
     axs[2].set_ylabel('FFT spectra [s$^{-1}$]', fontsize=fontSizeX)
-    axs[2].set_xlabel('frequency [s]', fontsize=fontSizeX)
+    axs[2].set_xlabel('frequency [s$^{-1}$]', fontsize=fontSizeX)
     axs[2].legend(frameon=False, fontsize=20)
     axs[2].axvline(x=0.155, color='black', linestyle=':')
     axs[2].axvline(x=0.055, color='black', linestyle=':')
@@ -355,7 +355,7 @@ def f_fftAnalysisForCheck_v2(w_radar_orig, timeRadar, wShip, timeShip, W_corr, W
     ############# end new figure ########################
 
 
-
+    print('stoppami che ho fatto la figura!')
     return()
 
 

@@ -13,7 +13,7 @@ import matplotlib.dates as mdates
 import numpy as np
 import netCDF4 as nc4
 from netCDF4 import Dataset
-import netcdftime
+import netCDF4
 import glob
 import pandas as pd
 from datetime import datetime
@@ -437,10 +437,6 @@ profile_mrr_rm = pd.Series(profile_mrr).rolling(window=N).mean().iloc[N-1:].valu
 plt.plot(timeLocal[N-1:], pd.Series(profile_mrr).rolling(window=N).mean().iloc[N-1:].values)
 
 #%%
-
-
-
-#%%
 # Create rectangle x coordinates
 startTime = datetime(2020,2,12,16,20,0)
 endTime = startTime + timedelta(minutes = 15)
@@ -528,7 +524,7 @@ cbarstr = 'Sk []'
 
 # settings for MRR variables
 RR = mrr_cs.liquid_water_content.values
-Ze = mrr_cs.Zea.values
+Ze = mrr_cs.Ze.values
 range_mrr = mrr_cs.height.values
 time_mrr = mrr_cs.time.values
 fall_speed = mrr_cs.fall_speed.values
@@ -676,7 +672,7 @@ cbar.set_label(label='Ze [dBZ]',  size=36)
 axs[0].set_ylabel('Height [m]', fontsize=36)
 
 #mrr_cs.Zea.plot(x='time', y='height', cmap=cmap_ze_mrr, vmin=-10., vmax=40.)
-mesh = axs[1].pcolormesh(timeLocal, range_mrr, mrr_interp.Zea.values.T, vmin=mincm_ze_mrr, vmax=maxcm_ze_mrr, cmap='viridis', rasterized=True)
+mesh = axs[1].pcolormesh(timeLocal, range_mrr, mrr_interp.Ze.values.T, vmin=mincm_ze_mrr, vmax=maxcm_ze_mrr, cmap='viridis', rasterized=True)
 axs[1].plot(lcl_time, lcl, color='black', label='Lifting condensation level (LCL)')
 axs[1].spines["top"].set_visible(False)
 axs[1].spines["right"].set_visible(False)

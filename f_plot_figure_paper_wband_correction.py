@@ -1219,6 +1219,7 @@ timeArr         = pd.to_datetime(np.arange(timeStart, timeEnd, timedelta(seconds
 print('processing '+date+', hour :'+hour)
 print('**************************************')
 
+
 print('* reading correction terms for the day/hour :'+yy+'-'+mm+'-'+dd+', hour: '+hour)
 '''reading correction terms for the day and interpolating them on the 0.25s time resolution'''
 
@@ -1435,8 +1436,8 @@ for i_chirp in range(0, Nchirps):
     ax.grid(which='minor', alpha=0.2)
     ax.grid(which='major', alpha=0.5)
     ax.plot(timeRadarSel, w_radar_meanCol, color='red', label='< $v_d$ >')
-    ax.plot(timeRadarSel, w_radar, linewidth = 0.2, color='red', label='$w_{signal}$')
-    ax.plot(timeSerieRadar, W_shipRadar, color='blue', linewidth=0.2, label='$w_{ship}$ from MRU unit')
+    ax.plot(timeRadarSel, w_radar,  '--', color='red', label='$w_{signal}$') #linewidth = 0.2,
+    ax.plot(timeSerieRadar, W_shipRadar, '--', color='blue', label='$w_{ship}$ from MRU unit') #linewidth=0.2, 
     ax.plot(timePlot, W_shipRadar, color='blue', label='$w_{ship}$ shifted of $\Delta$T found')
     ax.scatter(timeSerieRadar, W_ship_exact, color='green', label='$w_{ship}$ shifted interpolated on radar exact time')
     ax.set_ylim(-4.,2.)

@@ -250,8 +250,8 @@ import matplotlib.ticker as ticker
 h_max_2 = 3000.
 h_max = 2200.
 
-mincm = -5.
-maxcm = 5.
+mincm = -7.
+maxcm = 7.
 step = 0.1
 thrs = 0.
 colorsLower = ["#4553c2", "#2b19d9", "#d0d2f0", "#42455e", "#66abf9"]# grigio: 8c8fab
@@ -271,7 +271,7 @@ plt.rcParams.update({'font.size':14})
 grid            = True
 matplotlib.rc('xtick', labelsize=24)  # sets dimension of ticks in the plots
 matplotlib.rc('ytick', labelsize=24)  # sets dimension of ticks in the plots
-fig, axs = plt.subplots(4, 2, figsize=(25,18), constrained_layout=True)#  
+fig, axs = plt.subplots(4, 2, figsize=(25,18), constrained_layout=True, gridspec_kw={'height_ratios': [3, 3, 3, 1]})#  
 
 # build colorbar
 mesh = axs[0,0].pcolormesh(time_local, rangeRadar, Vd.T, vmin=mincm, vmax=maxcm, cmap=cmap, rasterized=True)
@@ -367,4 +367,4 @@ for ax, l in zip(axs[:,1].flatten(), ['(e) Original', '(f) Corrected', '(g) Corr
 
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
     
-fig.savefig(PathFigHour+date+'_'+hh+'_figure_paper.png')
+fig.savefig(PathFigHour+'Fig07.png')

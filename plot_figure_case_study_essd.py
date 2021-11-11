@@ -438,9 +438,9 @@ plt.plot(timeLocal[N-1:], pd.Series(profile_mrr).rolling(window=N).mean().iloc[N
 
 #%%
 # Create rectangle x coordinates
-startTime = datetime(2020,2,12,16,20,0)
+startTime = datetime(2020,2,12,15,50,0,0)
 endTime = startTime + timedelta(minutes = 15)
-
+#datetime(2020,2,12,16,5,0,0)
 
 
 # generate color array

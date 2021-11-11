@@ -39,7 +39,7 @@ from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
 from scipy.signal import chirp, find_peaks, peak_widths, peak_prominences
-
+import custom_color_palette as ccp
 
 ################################## functions definitions ####################################
 def f_defineSingleColorPalette(colors, minVal, maxVal, step):
@@ -96,37 +96,50 @@ def f_defineDoubleColorPalette(colorsLower, colorsUpper, minVal, maxVal, step, t
 
  # read radar height array for interpolation of model data from one single radar file
  
+date_selected = '20200213'
+dd = '13'
+mm = '02'
+yy = '2020'
+hh = '01'
 
+mrr_file_original = '/home/cacquist/mrr_paper_plot/20200213_010000-FirstStep-processed.nc'
+mrr_file_final = '/home/cacquist/mrr_paper_plot/20200213_MRR_PRO_msm_eurec4a.nc'
 
-radarDatatest          = xr.open_dataset(radarFileName)
-height                 = radarDatatest['Height'].values
-mask                   = radarDatatest['mask'].values
-RR                     = radarDatatest['RR'].values
-Ze                     = radarDatatest['Ze'].values
-LWC                    = radarDatatest['LWC'].values
-W                      = radarDatatest['W'].values
-time                   = radarDatatest['time'].values
+dict_plot = {'path':"/home/cacquist/mrr_paper_plot/plots/",
+             "varname":'mrr_process', 
+         "instr":"MRR_PRO"}
+
+mrr_final              = xr.open_dataset(mrr_file_final)
+time                   = mrr_final['time'].values
 units_time             = 'seconds since 1970-01-01 00:00:00'
-
 datetimeM              = pd.to_datetime(time, unit ='s', origin='unix')
+mrr_slice_hour = mrr_final.sel(time=slice(datetime(2020,2,13,1,0,0), datetime(2020,2,13,1,59,59)))
 
-print('file data read for : '+date_hour)
+
+# extracting only the file for the interested hour
+height                 = mrr_slice_hour['height'].values
+Ze                     = mrr_slice_hour['Ze'].values
+W                      = mrr_slice_hour['fall_speed'].values
+time_hour = mrr_slice_hour['time'].values
+datetime_hour              = pd.to_datetime(time_hour, unit ='s', origin='unix')
+
+
+
+print('file data read for : '+hh)
 print('----------------------')
-# filtering data based on the mask
-Ze[mask == 0]  = np.nan
-RR[mask == 0]  = np.nan
-LWC[mask == 0] = np.nan
-W[mask == 0]   = np.nan
+
+# setting time limits for the plot
+timeStartDay = datetime(2020,2,13,1,32,0,0)
+timeEndDay = datetime(2020,2,13,1,35,0,0)
 
 
-# reading corresponding metek file
-MetekFile       = pathFolderTree+'/mrr/'+yy+'/'+mm+'/'+dd+'/'+yy+mm+dd+'_'+hh+'0000.nc'
-print('file metek: ', MetekFile)
 
 # reading original data for paper plots
-origData = xr.open_dataset(MetekFile)
+origData = xr.open_dataset(mrr_file_original)
 Ze_orig  = origData['Zea'].values
-W_orig   = origData['VEL'].values
+W_orig   = origData['W'].values
+time_orig = origData['time'].values
+datetime_orig = pd.to_datetime(time_orig, unit ='s', origin='unix')
 
 
 # plot quicklook of filtered and corrected mdv for checking
@@ -139,6 +152,8 @@ fontSizeCbar    = 16
 rcParams['font.sans-serif'] = ['Tahoma']
 matplotlib.rcParams['savefig.dpi'] = 100
 plt.rcParams.update({'font.size':14})
+
+
 grid = True
 fig, axs = plt.subplots(2, 2, figsize=(14,9), sharey=True, constrained_layout=True)
 [a.get_yaxis().tick_left() for a in axs[:,:].flatten()]
@@ -146,16 +161,40 @@ fig, axs = plt.subplots(2, 2, figsize=(14,9), sharey=True, constrained_layout=Tr
 
 colorsLower = ["#4553c2", "#2b19d9", "#d0d2f0", "#42455e", "#66abf9"]# grigio: 8c8fab
 colorsUpper = ["#fd2c3b", "#59413f", "#fdc7cc", "#8f323c", "#e66c4c", "#ae8788"] #MDV
+colors_ze_mrr = ["#56ebd3", "#9e4302", "#2af464", "#d6061a", "#1fa198"]
+
+cmap, ticks, norm, bounds = f_defineSingleColorPalette(colors_ze_mrr, -20, 40., 1.)
+mesh = axs[0,0].pcolormesh(datetime_orig, height, Ze_orig.T, vmin=-20., vmax=40., cmap=cmap, rasterized=True)
+mesh = axs[0,1].pcolormesh(datetime_hour, height, Ze.T, vmin=-20., vmax=40., cmap=cmap, rasterized=True)
+axs[0,0].axvline(x=pd.to_datetime(datetime(2020,2,13,1,32,0)), color='black',linewidth=4, linestyle=':')
+axs[0,0].axvline(x=pd.to_datetime(datetime(2020,2,13,1,35,0)), color='black', linewidth=4, linestyle=':')
+axs[0,1].axvline(x=pd.to_datetime(datetime(2020,2,13,1,32,0)), color='black',linewidth=4, linestyle=':')
+axs[0,1].axvline(x=pd.to_datetime(datetime(2020,2,13,1,35,0)), color='black', linewidth=4, linestyle=':')
+
+
+cbar = fig.colorbar(mesh, ax=axs[0,:], label='Reflectivity [dBz]', location='right', aspect=20, use_gridspec=grid)
+cbar.set_label(label='Reflectivity [dBz]', size=fontSizeCbar)
+[a.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M')) for a in axs[0,:].flatten()]
+
+
 cmap, ticks, norm, bounds =  f_defineDoubleColorPalette(colorsLower, colorsUpper, -10., 2., 0.1, 0.)
-mesh = axs[1,0].pcolormesh(datetimeM, height, -W_orig.T, vmin=-10., vmax=2., cmap=cmap, rasterized=True)
+mesh = axs[1,0].pcolormesh(datetime_orig, height, -W_orig.T, vmin=-10., vmax=2., cmap=cmap, rasterized=True)
 axs[1,0].set_xlim(timeStartDay, timeEndDay)
-mesh = axs[1,1].pcolormesh(datetimeM, height, -W.T, vmin=-10, vmax=2., cmap=cmap, rasterized=True)
+mesh = axs[1,1].pcolormesh(datetime_hour, height, -W.T, vmin=-10, vmax=2., cmap=cmap, rasterized=True)
 axs[1,1].set_xlim(timeStartDay, timeEndDay)
+
 [a.xaxis.set_major_formatter(mdates.DateFormatter('%M:%S')) for a in axs[1,:].flatten()]
 [a.set_ylim(50., 1200.) for a in axs[:,:].flatten()]
-cbar = fig.colorbar(mesh, ax=axs[1,:], label='Doppler velocity [$ms^{-1}$]', location='right', aspect=20, use_gridspec=grid)
+[a.set_xlabel("Time (UTC) [hh:mm]", fontsize=fontSizeX) for a in  axs[0,:].flatten()]
+[a.set_xlabel("Time (UTC) [mm:ss]", fontsize=fontSizeX) for a in  axs[1,:].flatten()]
+
+cbar = fig.colorbar(mesh, ax=axs[1,:], label='Doppler velocity [ms$^{-1}$]', location='right', aspect=20, use_gridspec=grid)
 cbar.set_label(label='Doppler velocity [$ms^{-1}$]', size=fontSizeCbar)
+
+
 for ax, l in zip(axs.flatten(), ['(a) Original', '(b) Filtered', '(c) Original', '(d) Filtered and ship motions corrected']):
     ax.text(0, 1.02, l,  fontweight='black', transform=ax.transAxes)
-fig.savefig('{path}{date}_{hour}_quicklook_MRR.png'.format(**dict_plot))#pathFig+date+'_'+hour+'quicklook_MRR.png')
-fig.savefig('{path}{date}_{hour}_quicklook_MRR.pdf'.format(**dict_plot))
+
+
+fig.savefig('{path}Fig09.png'.format(**dict_plot))#pathFig+date+'_'+hour+'quicklook_MRR.png')
+fig.savefig('{path}Fig09.pdf'.format(**dict_plot))

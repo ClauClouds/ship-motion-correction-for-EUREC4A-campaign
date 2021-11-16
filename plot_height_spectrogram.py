@@ -17,6 +17,11 @@ import matplotlib
 # importing necessary libraries
 import os.path
 from datetime import datetime, timedelta
+from functions_essd import f_closest
+
+
+#%%
+
 def f_string_from_time_stamp(time_sel):
     '''function to derive string from a datetime input values
     input: time_sel (datetime)
@@ -55,27 +60,17 @@ v = radar_slice.Doppler_velocity.values
 range_offsets = radar_slice.range_offsets.values
 height = radar_slice.range.values
 spec_db= 10*np.log10(spec)
-print(radar_slice.time.values)
-
-v0 = v[range_offsets[0], :]
-v1 = v[range_offsets[1], :]
-v2 = v[range_offsets[2], :]
-print(np.shape(spec))
-# removing nans and selecting corresponding spectra matrices
-
-i_good_v0 = ~np.isnan(v0)
-i_good_v1 = ~np.isnan(v1)
-i_good_v2 = ~np.isnan(v2)
 
 
-print(np.shape(i_good_v1))
-spec_0 = spec_db[0:range_offsets[1]-1, ~np.isnan(v0)]
-spec_1 = spec_db[range_offsets[1]-1:range_offsets[2]-1,~np.isnan(v1)]
-spec_2 = spec_db[range_offsets[2]-1:, ~np.isnan(v2)]
+# reading doppler velocity and spectra for each chirp
+v0 = v[range_offsets[0]:range_offsets[1]-1, :]
+v1 = v[range_offsets[1]:range_offsets[2]-1, :]
+v2 = v[range_offsets[2]:, :]
 
-v0_plot = v0[~np.isnan(v0)]
-v1_plot = v1[~np.isnan(v1)]
-v2_plot = v2[~np.isnan(v2)]
+    
+spec_0 = spec_db[range_offsets[0]:range_offsets[1]-1, :]
+spec_1 = spec_db[range_offsets[1]-1:range_offsets[2]-1,:]
+spec_2 = spec_db[range_offsets[2]-1:,:]
 
 
 matplotlib.rc('xtick', labelsize=26)  # sets dimension of ticks in the plots
@@ -87,11 +82,13 @@ plt.gcf().subplots_adjust(bottom=0.15)
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
-mesh1 = ax.pcolormesh(v0_plot, height[0:range_offsets[1]-1], spec_0, cmap='jet', rasterized=True)
-mesh2 = ax.pcolormesh(v1_plot, height[range_offsets[1]-1:range_offsets[2]-1], spec_1, cmap='jet', rasterized=True)
-mesh3 = ax.pcolormesh(v2_plot, height[range_offsets[2]-1:], spec_2, cmap='jet', rasterized=True)
+height_matrix = np.array([height[range_offsets[0]:range_offsets[1]-1]] * 512).T
+
+mesh1 = ax.pcolormesh(v0, height_matrix, spec_0, cmap='jet', rasterized=True)
+#mesh2 = ax.pcolormesh(v1, height[range_offsets[1]-1:range_offsets[2]-1], spec_1, cmap='jet', rasterized=True)
+#mesh3 = ax.pcolormesh(v2, height[range_offsets[2]-1:], spec_2, cmap='jet', rasterized=True)
 ax.set_xlim(-10., 1.)
-ax.set_ylim(100., 2500.)
+ax.set_ylim(100., 500.)
 ax.set_xlabel('Doppler velocity [ms$^{-1}$]', fontsize=24)
 ax.set_ylabel('Height [m]', fontsize=24)
 

@@ -112,14 +112,19 @@ def f_defineDoubleColorPalette(colorsLower, colorsUpper, minVal, maxVal, step, t
 
     return(cmap, ticks, norm, bounds)
 
+# paths for OSTRO
+#mrr_file_original = '/home/cacquist/mrr_paper_plot/20200213_010000-FirstStep-processed.nc'
+#mrr_file_final = '/home/cacquist/mrr_paper_plot/20200213_MRR_PRO_msm_eurec4a.nc'
+#mrr_spec_file = '/home/cacquist/mrr_paper_plot/13022020_01_preprocessedClau_4Albert.nc'
+#Path_out = '/home/cacquist/mrr_paper_plot/plots/'
+#mrr_metek = '/home/cacquist/mrr_paper_plot/20200213_010000.nc'
 
-mrr_file_original = '/home/cacquist/mrr_paper_plot/20200213_010000-FirstStep-processed.nc'
-mrr_file_final = '/home/cacquist/mrr_paper_plot/20200213_MRR_PRO_msm_eurec4a.nc'
-mrr_spec_file = '/home/cacquist/mrr_paper_plot/13022020_01_preprocessedClau_4Albert.nc'
-Path_out = '/home/cacquist/mrr_paper_plot/plots/'
-mrr_metek = '/home/cacquist/mrr_paper_plot/20200213_010000.nc'
-
-
+# paths for MAC
+mrr_file_original = '/Volumes/Extreme SSD/work/006_projects/001_Prec_Trade_Cycle/mrr_paper_plot/20200213_010000-FirstStep-processed.nc'
+mrr_file_final = '/Volumes/Extreme SSD/work/006_projects/001_Prec_Trade_Cycle/mrr_paper_plot/20200213_MRR_PRO_msm_eurec4a.nc'
+mrr_spec_file = '/Volumes/Extreme SSD/work/006_projects/001_Prec_Trade_Cycle/mrr_paper_plot/13022020_01_preprocessedClau_4Albert.nc'
+Path_out = '/Volumes/Extreme SSD/work/006_projects/001_Prec_Trade_Cycle/mrr_paper_plot/plots/'
+mrr_metek = '/Volumes/Extreme SSD/work/006_projects/001_Prec_Trade_Cycle/mrr_paper_plot/20200213_010000.nc'
 
 dict_plot = {'path':"/home/cacquist/mrr_paper_plot/plots/",
              "varname":'mrr_process', 
@@ -253,14 +258,16 @@ axs[2,0].set_ylim(0.,35.)
 axs[2,1].set_ylim(0.,35.)
 axs[2,0].set_xlabel('Doppler velocity [ms$^{-1}$]', fontsize=16)
 axs[2,1].set_xlabel('Doppler velocity [ms$^{-1}$]', fontsize=16)
+axs[2,0].set_ylabel('Power [dB]', fontsize=16)
+axs[2,1].set_ylabel('Power [dB]', fontsize=16)
 axs[2,0].legend(frameon=False, fontsize=14)
 axs[2,1].legend(frameon=False, fontsize=14)
 
 for ax, l in zip(axs[:,:].flatten(), ['(a) Mean Doppler velocity - MRR ', \
 	'(b) Reflectivity - W-band', \
 	'(c) Doppler spectra for signal ', \
-	'(e) Doppler spectra for noise', \
-	'(f) Doppler spectra for signal at selected heights', '(d) Doppler spectra for noise at selected heights']):
+	'(d) Doppler spectra for noise', \
+	'(e) Doppler spectra for signal at selected heights', '(f) Doppler spectra for noise at selected heights']):
     ax.text(-0.05, 1.05, l,  fontweight='black', fontsize=14, transform=ax.transAxes)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
